@@ -1,0 +1,12 @@
+Best model: Hybrid (Voting)
+Train n=3636  Test n=909
+
+              precision    recall  f1-score   support
+
+         Low       0.52      0.44      0.47       179
+      Middle       0.36      0.13      0.19       211
+        High       0.66      0.86      0.75       519
+
+    accuracy                           0.61       909
+   macro avg       0.51      0.48      0.47       909
+weighted avg       0.56      0.61      0.56       909
