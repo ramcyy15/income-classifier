@@ -1,0 +1,11 @@
+Hold-out accuracy: 0.4939
+
+              precision    recall  f1-score   support
+
+         Low     0.3727    0.5642    0.4489       179
+      Middle     0.2716    0.2986    0.2844       211
+        High     0.7020    0.5491    0.6162       519
+
+    accuracy                         0.4939       909
+   macro avg     0.4487    0.4707    0.4498       909
+weighted avg     0.5372    0.4939    0.5062       909

@@ -1,13 +1,3 @@
-"""
-Fetch QC 5th District barangay polygons from OpenStreetMap (Overpass API)
-and write them as a GeoJSON FeatureCollection.
-
-Output: data/geo/qc5_barangays.geojson (14 features, one per barangay).
-
-Run once:
-    python build_regions_geojson.py
-"""
-
 import json
 import os
 import urllib.parse
@@ -15,7 +5,7 @@ import urllib.request
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 GEO_DIR = os.path.join(BASE, "data", "geo")
-OUT_PATH = os.path.join(GEO_DIR, "qc5_barangays.geojson")
+OUT_PATH = os.path.join(GEO_DIR, "qc5_polygons.geojson")
 
 BARANGAYS = {
     "Bagbag": ["Bagbag"],
@@ -35,7 +25,7 @@ BARANGAYS = {
 }
 
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
-QC_AREA_ID = 3600106569  # OSM relation 106569 (Quezon City) -> area id
+QC_AREA_ID = 3600106569
 
 
 def build_query():
@@ -65,7 +55,6 @@ def fetch_overpass(query):
 
 
 def relation_to_rings(elem):
-    """Extract closed outer rings from an Overpass relation with `out geom`."""
     outers = [m for m in elem.get("members", []) if m.get("role") == "outer"]
     rings = []
     for m in outers:

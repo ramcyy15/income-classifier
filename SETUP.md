@@ -1,81 +1,53 @@
-# How to Start This Project
 
-Follow these steps in order.
+# Setup
 
-## 1. Install Python
+District V (Novaliches, QC) — Family Income Dashboard.
 
-Make sure Python 3.10 or newer is installed.
-
-Check with:
+## 1. Install Python 3.10+
 
 ```
 python --version
 ```
 
-## 2. Install the required libraries
-
-Open a terminal in the project folder and run:
+## 2. Install libraries
 
 ```
-python -m pip install pandas numpy scikit-learn matplotlib joblib shapely streamlit plotly
+python -m pip install pandas numpy scikit-learn xgboost matplotlib joblib streamlit plotly openpyxl
 ```
 
-## 3. Check that the data is there (Skip mo na  to)
-
-Inside the data folder you should see these subfolders:
+## 3. Train the model
 
 ```
-data/income
-data/employement
-data/education
-data/health
-data/population
+python build_stacking_model.py
 ```
 
-Each contains the PSA CSV files. If any are missing, download them again from psa.gov.ph.
+Writes:
 
-## 4. Prepare the map file (Skip niyo nato provided ko na)
+- `models/stacking_model.joblib` — Stacking classifier (RF + XGBoost → Logistic Regression)
+- `outputs/merged_barangay_dataset.csv` — barangay-level table used by the app
+- `outputs/family_predictions.csv` — per-family predictions
+- `outputs/stacking_confusion_matrix.png`, `stacking_*_feature_importance.png`, `stacking_classification_report.txt`
 
-The map needs a GeoJSON of the 17 Philippine regions.
-
-1. Go to github.com/faeldon/philippines-json-maps
-2. Open the folder 2023/geojson/provdists/lowres
-3. Download all 17 files named provdists-region-XXXXXXXXX.0.01.json
-4. Put them inside the folder data/geo
-5. From the project folder, run:
-
-```
-python build_regions_geojson.py
-```
-
-This will create one file named ph_regions.geojson inside data/geo.
-
-## 5. Train the model
-
-Run:
-
-```
-python build_model.py
-```
-
-When it finishes, check the outputs folder. You should see the metrics file, the confusion matrix images, and a file called best_model.joblib inside the models folder.
-
-## 6. Start the dashboard
-
-Run:
-
-```
+## 4. Run the dashboard
 python -m streamlit run app.py
-```
 
-Open the link shown in the terminal (usually http://localhost:8501).
 
-On the dashboard:
+Open the URL the terminal prints (usually http://localhost:8501).
 
-- Hover over a region to see its indicators.
-- Click a region to see the predicted income class and the recommended aid programs.
-- Use the sidebar dropdown if you want to pick a region without clicking the map.
+**Note:** use `python -m streamlit run app.py`, not the bare `streamlit run app.py`.
+On Windows, `pip install --user` puts `streamlit.exe` in a folder that isn't on PATH,
+so the bare command fails with *"streamlit is not recognized"*. Going through
+`python -m` skips the PATH lookup.
 
-## 7. Stop the dashboard
+On the page:
 
-In the terminal where Streamlit is running, press Ctrl and C at the same time.
+- Click a pin on the map, or pick a barangay from the sidebar.
+- The right panel shows the predicted income tier, indicators, and recommended aid programs.
+
+Stop with `Ctrl+C` in the terminal.
+
+## Troubleshooting
+
+- **`streamlit is not recognized`** — use `python -m streamlit run app.py` (see note above).
+- **`ModuleNotFoundError: xgboost`** — re-run step 2; xgboost is needed by the training script.
+- **`Run python build_stacking_model.py first`** banner in the app — the model artifact or merged CSV is missing. Run step 3.
