@@ -21,6 +21,87 @@ CLASS_COLORS = {"Low": "#e91e63", "Middle": "#ad1457", "High": "#4a0e2e"}
 CLASS_ORDER = ["Low", "Middle", "High"]
 CLASS_TIER = {"Low": "Survival", "Middle": "Subsistence", "High": "Self-sufficient"}
 
+# ──────────────────────────────────────────────────────────────────────
+# Trend & Graduation Density Analysis (selection-bias-aware)
+# ──────────────────────────────────────────────────────────────────────
+# The 4Ps registry used in this study is a **selection-biased sample**:
+# only marginalized households who qualified for Pantawid Pamilya cash
+# transfers appear in it. The barangay's general population is not
+# represented. As a baseline anchor, the PSA Poverty Statistics report
+# Quezon City's overall family poverty incidence at ~0.7% (2023).
+# Computing poverty incidence directly inside the 4Ps registry therefore
+# tells us *nothing* about the barangay's total wealth — it would
+# spuriously label every barangay as Low-Income.
+#
+# Instead, a barangay is classified by:
+#   (a) Pocket Density — size of the 4Ps registry relative to the
+#       barangay's 2024 population. A small pocket → an isolated
+#       low-income enclave inside an otherwise non-poor barangay.
+#   (b) SWDI Tier Transition Rate — share of the 4Ps registry that
+#       has either Graduated from the program OR is predicted as SWDI
+#       Level 3 (Self-Sufficient). Captures upward mobility within
+#       the marginalized pocket.
+#   (c) External anchor — QC's 0.7% baseline (PSA, 2023) means the
+#       default narrative for any QC barangay is *not* "Low-Income".
+COMMUNITY_CLASS_ORDER = ["priority", "developing", "stable"]
+COMMUNITY_LABELS = {
+    "priority":   "Level 1 · Priority Barangay (Most Vulnerable in District V)",
+    "developing": "Level 2 · Developing Barangay",
+    "stable":     "Level 3 · Stable Barangay (Lowest Vulnerability in District V)",
+}
+COMMUNITY_SHORT = {
+    "priority":   "Level 1 · Priority",
+    "developing": "Level 2 · Developing",
+    "stable":     "Level 3 · Stable",
+}
+COMMUNITY_COLORS = {
+    "priority":   "#c62828",
+    "developing": "#f57c00",
+    "stable":     "#1b8b4e",
+}
+
+QC_BASELINE_POVERTY_PCT = 0.7      # PSA Poverty Statistics, Quezon City, 2023
+
+
+def assign_district_tertiles(df):
+    """Within-District-V tertile classification.
+
+    Because Quezon City's overall family poverty rate is only ~0.7%
+    (PSA, 2023), absolute density thresholds (e.g., 30 or 100 per 1,000)
+    classify every Novaliches barangay into the same bucket and the
+    dashboard becomes uninformative. The defensible alternative — and
+    the way PSA Small Area Estimation is actually used for LGU
+    prioritization — is to rank the barangays *within the study area*
+    and split them into thirds.
+
+    Score = pocket_density × (1 − transition_rate / 100), so a large
+    marginalized pocket that is also stuck scores higher than a large
+    pocket that is actively moving up.
+
+    With 14 barangays the split is 5 / 4 / 5: bottom-five by score get
+    "stable", middle four get "developing", top-five get "priority".
+    """
+    score = (
+        df["pocket_density_per_1k"].fillna(0)
+        * (1 - df["transition_rate_pct"].fillna(0).clip(upper=100) / 100)
+    )
+    df["vulnerability_score"] = score
+    ranks = score.rank(method="first", ascending=True)
+    n = len(df)
+    cuts = (n / 3.0, 2 * n / 3.0)
+
+    def _bucket(r):
+        if r <= cuts[0]:
+            return "stable"
+        if r <= cuts[1]:
+            return "developing"
+        return "priority"
+
+    df["community_class"] = ranks.apply(_bucket)
+    df["community_rank"] = ranks.astype(int)
+    df["community_rank_total"] = n
+    return df
+
 _CANON_BRGY = [
     "Bagbag", "Capri", "Fairview", "Greater Lagro", "Gulod", "Kaligayahan",
     "Nagkaisang Nayon", "North Fairview", "Novaliches Proper",
@@ -55,7 +136,53 @@ def label_feature(f):
 
 @st.cache_data
 def load_brgy():
-    return pd.read_csv(BRGY_PATH)
+    df = pd.read_csv(BRGY_PATH)
+    families = pd.read_csv(OUT / "family_predictions.csv")
+
+    # Trend & Graduation Density signals (selection-bias-aware).
+    mobility_mask = (
+        (families["predicted_class"] == "High")
+        | (families["household_status"] == "Graduated")
+    )
+    mobility_by_brgy = (
+        families.assign(_mob=mobility_mask)
+        .groupby("barangay")["_mob"]
+        .sum()
+        .rename("mobility_count")
+    )
+    graduated_by_brgy = (
+        families[families["household_status"] == "Graduated"]
+        .groupby("barangay")
+        .size()
+        .rename("graduated_count")
+    )
+    df = df.merge(mobility_by_brgy, left_on="barangay", right_index=True, how="left")
+    df = df.merge(graduated_by_brgy, left_on="barangay", right_index=True, how="left")
+    df["mobility_count"] = df["mobility_count"].fillna(0)
+    df["graduated_count"] = df["graduated_count"].fillna(0)
+
+    # Defensive: families_surveyed / pop_2024 may be missing for some rows.
+    df["families_surveyed"] = df["families_surveyed"].fillna(0)
+    df["pop_2024"] = df["pop_2024"].fillna(0)
+    surveyed = df["families_surveyed"].clip(lower=1)
+    pop_safe = df["pop_2024"].clip(lower=1)
+
+    df["pocket_density_per_1k"] = (
+        df["families_surveyed"] / pop_safe * 1000
+    ).fillna(0)
+    df["transition_rate_pct"] = (
+        df["mobility_count"] / surveyed * 100
+    ).fillna(0)
+    df["graduated_share_pct"] = (
+        df["graduated_count"] / surveyed * 100
+    ).fillna(0)
+
+    df = assign_district_tertiles(df)
+    df["community_class"] = df["community_class"].fillna("developing")
+    df["community_label"] = (
+        df["community_class"].map(COMMUNITY_LABELS).fillna(COMMUNITY_LABELS["developing"])
+    )
+    return df
 
 
 @st.cache_data
@@ -252,16 +379,17 @@ def render_overview(brgy_df):
         (brgy_df["avg_per_capita_income"] * brgy_df["families_surveyed"]).sum()
         / max(families, 1)
     )
-    dominant = brgy_df["predicted_class"].value_counts().idxmax()
+    dominant_community = COMMUNITY_SHORT.get(
+        brgy_df["community_class"].value_counts().idxmax(), "—"
+    )
 
     cards = [
         ("Barangays", f"{len(brgy_df)}"),
-        ("Families", f"{families:,}"),
         ("Population", f"{pop:,}"),
         ("₱ / person", f"{income:,.0f}"),
-        ("Dominant tier", dominant),
+        ("Most common type", dominant_community),
     ]
-    cols = st.columns(5)
+    cols = st.columns(4)
     for col, (k, v) in zip(cols, cards):
         with col:
             st.markdown(
@@ -271,29 +399,120 @@ def render_overview(brgy_df):
             )
 
 
+def render_classification_report(row, community_key):
+    """Per-barangay classification statement with sourced framework citation."""
+    label = COMMUNITY_LABELS.get(community_key, "—")
+    color = COMMUNITY_COLORS.get(community_key, "#f57c00")
+    density = float(row.get("pocket_density_per_1k", 0))
+    transition = float(row.get("transition_rate_pct", 0))
+    graduated = float(row.get("graduated_share_pct", 0))
+    surveyed = int(row.get("families_surveyed", 0))
+    pop = int(row.get("pop_2024", 0))
+
+    rank = int(row.get("community_rank", 0))
+    total = int(row.get("community_rank_total", 14))
+    rank_text = f"rank <strong>#{rank}</strong> out of {total} barangays"
+
+    if community_key == "priority":
+        why_html = (
+            f"This barangay is one of the <strong>most vulnerable</strong> "
+            f"in District V — it ranks {rank_text} when all 14 Novaliches "
+            f"barangays are sorted from least to most vulnerable. It has "
+            f"<strong>{density:.1f} poor families per 1,000 residents</strong> "
+            f"({surveyed:,} surveyed families in a 2024 population of "
+            f"{pop:,}), and only <strong>{transition:.1f}%</strong> of them "
+            f"are moving up out of poverty (either they finished the 4Ps "
+            f"program or are predicted to have reached a comfortable "
+            f"income). Compared to the other 13 barangays, this one's "
+            f"poor pocket is among the largest and most stuck — so it "
+            f"should be a <em>top priority</em> for support programs."
+        )
+    elif community_key == "stable":
+        why_html = (
+            f"This barangay is one of the <strong>least vulnerable</strong> "
+            f"in District V — it ranks {rank_text} (from least to most "
+            f"vulnerable). It has <strong>{density:.1f} poor families per "
+            f"1,000 residents</strong> ({surveyed:,} surveyed families in "
+            f"a 2024 population of {pop:,}), and <strong>{transition:.1f}%</strong> "
+            f"of them are moving up. Compared to other Novaliches "
+            f"barangays, its poor pocket is among the smallest and most "
+            f"mobile — so it has <em>lower priority</em> for new programs, "
+            f"though existing 4Ps families should continue to be served."
+        )
+    else:
+        why_html = (
+            f"This barangay sits in the <strong>middle of the District V "
+            f"ranking</strong> — {rank_text} (from least to most "
+            f"vulnerable). It has <strong>{density:.1f} poor families per "
+            f"1,000 residents</strong> ({surveyed:,} surveyed families in "
+            f"a 2024 population of {pop:,}), and <strong>{transition:.1f}%</strong> "
+            f"of them are moving up. Its poor pocket is medium-sized and "
+            f"actively in transition — neither the most vulnerable nor "
+            f"the most stable in Novaliches."
+        )
+
+    source_html = (
+        "<strong>How we decide:</strong> All 14 District V barangays are "
+        "ranked by a vulnerability score — number of poor families per "
+        "1,000 residents, weighted by how few of them are moving up. "
+        "The bottom-third of the ranking is labeled <em>Stable</em>, the "
+        "middle-third <em>Developing</em>, and the top-third "
+        "<em>Priority</em>.<br>"
+        "<strong>Why peer ranking:</strong> Quezon City's overall family "
+        f"poverty rate is only <strong>{QC_BASELINE_POVERTY_PCT:.1f}%</strong> "
+        "(PSA, 2023), so absolute thresholds give the same answer for "
+        "every QC barangay and are not useful. Instead we compare "
+        "barangays against each other — the same way the Philippine "
+        "Statistics Authority's Small Area Estimation method is used by "
+        "LGUs to identify high-priority areas inside their jurisdiction."
+    )
+
+    st.markdown(
+        f"<div class='kpi'>"
+        f"<div class='k'>Classification report</div>"
+        f"<div style='margin-top:8px;'>"
+        f"<span style='display:inline-block;background:{color};color:#fff;"
+        f"padding:3px 12px;border-radius:999px;font-weight:700;"
+        f"font-size:11px;letter-spacing:0.3px;'>{label}</span>"
+        f"</div>"
+        f"<div style='margin-top:10px;font-size:13px;line-height:1.6;"
+        f"color:#2d1020;'>{why_html}</div>"
+        f"<div style='margin-top:10px;padding:9px 12px;"
+        f"background:rgba(252,228,236,0.55);border-radius:8px;"
+        f"font-size:11px;line-height:1.55;color:#4a0e2e;'>{source_html}</div>"
+        f"<div style='margin-top:8px;font-size:11px;color:#9b3b6b;'>"
+        f"<strong>The numbers:</strong> "
+        f"<strong>{density:.1f}</strong> poor families per 1,000 residents · "
+        f"<strong>{transition:.1f}%</strong> of them have moved up · "
+        f"<strong>{graduated:.1f}%</strong> finished the 4Ps program."
+        f"</div></div>",
+        unsafe_allow_html=True,
+    )
+
+
 def render_indicators(row):
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("₱ / person",
-              f"{row['avg_per_capita_income']:,.0f}"
+    c1.metric("Income per person",
+              f"₱{row['avg_per_capita_income']:,.0f}"
               if pd.notna(row['avg_per_capita_income']) else "—")
     c2.metric("Family size", f"{row['avg_family_size']:.1f}")
-    c3.metric("Children", f"{row['avg_dependents']:.1f}")
-    c4.metric("In school", f"{row['avg_children_in_school']:.1f}")
+    c3.metric("Children at home", f"{row['avg_dependents']:.1f}")
+    c4.metric("Going to school", f"{row['avg_children_in_school']:.1f}")
 
     c5, c6, c7, c8 = st.columns(4)
     c5.metric("Population", f"{row['pop_2024']:,.0f}")
     c6.metric("Growth ’20–’24", f"{row['pop_growth_2020_2024']:+.1f}%")
-    c7.metric("4Ps / 1k",
+    c7.metric("4Ps per 1,000",
               f"{row['four_ps_per_1k_pop']:.1f}"
               if pd.notna(row['four_ps_per_1k_pop']) else "—")
-    c8.metric("% active", f"{row['active_4ps_share']:.0f}%")
+    c8.metric("Still in 4Ps", f"{row['active_4ps_share']:.0f}%")
 
 
 def render_class_distribution(row):
     surveyed = row["families_surveyed"]
     df = pd.DataFrame({
-        "Tier": CLASS_ORDER * 2,
-        "Source": ["Model"] * 3 + ["Survey"] * 3,
+        "Income level": CLASS_ORDER * 2,
+        "Source": ["Tool guess"] * 3 + ["Actual"] * 3,
         "Share (%)": [
             row["pred_low"] / surveyed * 100,
             row["pred_middle"] / surveyed * 100,
@@ -304,8 +523,8 @@ def render_class_distribution(row):
         ],
     })
     fig = px.bar(
-        df, x="Tier", y="Share (%)", color="Tier",
-        facet_col="Source", category_orders={"Tier": CLASS_ORDER},
+        df, x="Income level", y="Share (%)", color="Income level",
+        facet_col="Source", category_orders={"Income level": CLASS_ORDER},
         color_discrete_map=CLASS_COLORS,
     )
     fig.update_layout(
@@ -337,28 +556,33 @@ def render_district_map(brgy, *, height=520, key="brgy_map", focus=None):
     scatter = px.scatter_map if use_new_api else px.scatter_mapbox
     style_kw = "map_style" if use_new_api else "mapbox_style"
 
+    plot_df["community_label"] = plot_df["community_class"].map(COMMUNITY_LABELS)
     fig = scatter(
         plot_df,
         lat="lat", lon="lon",
-        color="predicted_class",
-        color_discrete_map=CLASS_COLORS,
-        category_orders={"predicted_class": CLASS_ORDER},
+        color="community_label",
+        color_discrete_map={v: COMMUNITY_COLORS[k]
+                            for k, v in COMMUNITY_LABELS.items()},
+        category_orders={"community_label": [COMMUNITY_LABELS[k]
+                                              for k in COMMUNITY_CLASS_ORDER]},
         hover_name="barangay",
         hover_data={
-            "predicted_class": True,
+            "community_label": True,
+            "pocket_density_per_1k": ":.1f",
+            "transition_rate_pct": ":.1f",
             "avg_per_capita_income": ":,.0f",
             "four_ps_recipients_latest": ":,.0f",
             "pop_2024": ":,.0f",
-            "families_surveyed": ":,d",
             "lat": False, "lon": False,
         },
         custom_data=["barangay"],
         labels={
-            "predicted_class": "Predicted tier",
-            "avg_per_capita_income": "Monthly per-capita income (₱)",
-            "four_ps_recipients_latest": "4Ps Recipients (latest SY)",
+            "community_label": "Type of barangay",
+            "pocket_density_per_1k": "4Ps families per 1,000 residents",
+            "transition_rate_pct": "Share of 4Ps families moving up (%)",
+            "avg_per_capita_income": "Monthly income per person (₱)",
+            "four_ps_recipients_latest": "4Ps recipients (latest school year)",
             "pop_2024": "Population (2024)",
-            "families_surveyed": "Families surveyed",
         },
         center=center,
         zoom=DISTRICT_V_ZOOM,
@@ -371,7 +595,7 @@ def render_district_map(brgy, *, height=520, key="brgy_map", focus=None):
     fig.update_layout(
         margin={"r": 0, "t": 0, "l": 0, "b": 0},
         height=height,
-        legend_title_text="Tier",
+        legend_title_text="Type of barangay",
         legend={
             "bgcolor": "rgba(255,255,255,0.95)",
             "bordercolor": "#fadbe5",
@@ -430,11 +654,12 @@ def render_shap_panel(brgy_name, predicted_class, shap_df, top_n=6):
             f"</div></div>"
         )
     st.markdown(
-        f"<div class='kpi'><div class='k'>What's driving this prediction</div>"
+        f"<div class='kpi'><div class='k'>Why the tool guessed this</div>"
         f"<div class='muted' style='margin-top:4px;line-height:1.5;'>"
-        f"These are the factors the model relied on most when classifying "
-        f"<strong>{brgy_name}</strong> as <strong>{predicted_class}</strong>. "
-        f"Longer bar = bigger influence on the prediction."
+        f"These are the things the tool looked at most when it decided "
+        f"that <strong>{predicted_class}</strong> is the most common "
+        f"income level for families in <strong>{brgy_name}</strong>. "
+        f"Longer bar means a bigger effect on the guess."
         f"</div>"
         f"<div style='margin-top:14px;'>{''.join(bars)}</div></div>",
         unsafe_allow_html=True,
@@ -591,11 +816,44 @@ def _dominant_dim(weights):
     return max(weights.items(), key=lambda kv: kv[1])[0]
 
 
-def _combine_dim(programs_with_intensity, dim):
-    """Weighted-average intensity for a dimension across active programs."""
-    total_w = sum(p["weights"][dim] for p in programs_with_intensity) or 1.0
-    return sum(p["intensity"] * p["weights"][dim]
-               for p in programs_with_intensity) / total_w
+def goal_seek_intervention(families, target_low_reduction_pct, years,
+                            model, features, grid_step=25):
+    """Inverse simulation: brute-force search across (financial, education,
+    livelihood) intensity mixes on a coarse grid. Returns every mix that hits
+    the Low-tier reduction target, sorted by total effort (sum of intensities),
+    plus the best attempt overall so the UI can fall back gracefully when no
+    mix is viable. With grid_step=25 the search is 5^3 = 125 evaluations."""
+    now_tiers = predict_tier(model, features, families)
+    now_low = int((pd.Series(now_tiers) == "Low").sum())
+    if now_low == 0:
+        return {"viable": [], "best_attempt": None, "now_low": 0}
+
+    grid = list(range(0, 101, grid_step))
+    viable = []
+    best_attempt = None
+    best_reduction = -1.0
+
+    for f in grid:
+        for e in grid:
+            for l in grid:
+                projected = simulate_intervention(families, f, e, l, years)
+                fut_tiers = predict_tier(model, features, projected)
+                fut_low = int((pd.Series(fut_tiers) == "Low").sum())
+                reduction_pct = (now_low - fut_low) / now_low * 100.0
+                entry = {
+                    "fin": f, "edu": e, "liv": l,
+                    "cost": f + e + l,
+                    "reduction_pct": reduction_pct,
+                    "fut_low": fut_low,
+                }
+                if reduction_pct > best_reduction:
+                    best_reduction = reduction_pct
+                    best_attempt = entry
+                if reduction_pct >= target_low_reduction_pct:
+                    viable.append(entry)
+
+    viable.sort(key=lambda x: (x["cost"], -x["reduction_pct"]))
+    return {"viable": viable, "best_attempt": best_attempt, "now_low": now_low}
 
 
 def render_policy_brief(brgy_name, briefs):
@@ -680,15 +938,10 @@ def render_intervention_plan(brgy_name, families_df, model_pipeline, features,
         )
 
     PRIORITY_COLOR = {"High": "#c62828", "Medium": "#ad1457", "Low": "#9b3b6b"}
-    DIM_LABEL = {"financial": "Financial", "education": "Education",
-                 "livelihood": "Livelihood"}
+    DIM_LABEL = {"financial": "Financial help", "education": "Education support",
+                 "livelihood": "Livelihood & family"}
     DIM_COLOR = {"financial": "#e91e63", "education": "#6a1b4d",
                  "livelihood": "#ad1457"}
-
-    suggestion = (brief or {}).get("slider_suggestion") or {}
-    sug_fin = int(suggestion.get("financial", 50))
-    sug_edu = int(suggestion.get("education", 50))
-    sug_liv = int(suggestion.get("livelihood", 50))
 
     programs = list((brief or {}).get("programs") or [])
     if not programs:
@@ -703,45 +956,135 @@ def render_intervention_plan(brgy_name, families_df, model_pipeline, features,
              "priority": "Medium",
              "rationale": "(No LLM brief — using a generic plan placeholder.)"},
         ]
-
-    for i, p in enumerate(programs):
+    for p in programs:
         p["weights"] = _program_weights(p.get("name", ""), p.get("agency", ""))
         p["dominant"] = _dominant_dim(p["weights"])
-        ai_default = {"financial": sug_fin, "education": sug_edu,
-                      "livelihood": sug_liv}[p["dominant"]]
-        key = f"prog_int_{brgy_name}_{i}"
-        if key not in st.session_state:
-            st.session_state[key] = ai_default
-        p["_key"] = key
 
-    preset_col1, preset_col2, preset_col3 = st.columns(3)
-    if preset_col1.button("No action  ·  0%", use_container_width=True,
-                           key=f"preset_none_{brgy_name}"):
-        for p in programs:
-            st.session_state[p["_key"]] = 0
-        st.rerun()
-    if preset_col2.button("★ AI-recommended plan", use_container_width=True,
-                           key=f"preset_ai_{brgy_name}"):
-        for p in programs:
-            st.session_state[p["_key"]] = {"financial": sug_fin,
-                                            "education": sug_edu,
-                                            "livelihood": sug_liv}[p["dominant"]]
-        st.rerun()
-    if preset_col3.button("Aggressive  ·  90%", use_container_width=True,
-                           key=f"preset_agg_{brgy_name}"):
-        for p in programs:
-            st.session_state[p["_key"]] = 90
-        st.rerun()
+    brgy_families = families_df[families_df["barangay"] == brgy_name].copy()
+    if brgy_families.empty:
+        st.warning("No family records for this barangay.")
+        return
 
-    st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
     st.markdown(
-        "<div class='muted' style='font-size:12px;margin-bottom:4px;'>"
-        "Each program is a dial. Move it to set how aggressively that specific "
-        "program is implemented over the chosen horizon."
-        "</div>",
+        "<div style='padding:12px 14px;background:rgba(252,228,236,0.6);"
+        "border-left:4px solid #ad1457;border-radius:10px;font-size:13px;"
+        "line-height:1.55;margin-bottom:14px;'>"
+        "<div style='font-size:11px;font-weight:700;text-transform:uppercase;"
+        "letter-spacing:0.5px;color:#ad1457;margin-bottom:4px;'>"
+        "Plan with a goal in mind</div>"
+        "<div style='color:#2d1020;'>Tell us what outcome you want and we "
+        "will find the simplest plan that gets there. We try lots of "
+        "combinations of programs and show you the one that needs the "
+        "least push.</div></div>",
         unsafe_allow_html=True,
     )
 
+    g1, g2, g3 = st.columns([1.6, 0.7, 0.5])
+    target_pct = g1.slider(
+        "My goal: help at least this many of the poorest families move up (%)",
+        min_value=5, max_value=60, value=25, step=5,
+        key=f"goal_target_{brgy_name}",
+        help="Set your target. We will try lots of program combinations and "
+             "show you the easiest one that reaches your goal.",
+    )
+    years = g2.select_slider(
+        "Time (years)", options=[3, 4, 5], value=5,
+        key=f"goal_years_{brgy_name}",
+    )
+    g3.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
+    solve_clicked = g3.button("★ Solve", use_container_width=True,
+                               key=f"goal_solve_{brgy_name}")
+
+    cache_key = f"goal_result_{brgy_name}"
+    cache_args_key = f"goal_args_{brgy_name}"
+    args_now = (target_pct, years)
+    cached_args = st.session_state.get(cache_args_key)
+
+    needs_run = solve_clicked or cache_key not in st.session_state
+    if needs_run:
+        with st.spinner(f"Trying many program combinations for {brgy_name}…"):
+            result = goal_seek_intervention(
+                brgy_families, target_pct, years,
+                model_pipeline, features, grid_step=25,
+            )
+        st.session_state[cache_key] = result
+        st.session_state[cache_args_key] = args_now
+    elif cached_args != args_now:
+        st.markdown(
+            "<div style='padding:8px 12px;background:rgba(173,20,87,0.08);"
+            "border-radius:8px;font-size:12px;color:#4a0e2e;margin-bottom:10px;'>"
+            "You changed your goal or the time. Press <strong>★ Solve</strong> "
+            "again to get a fresh plan — the results below are from your "
+            "previous setting."
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+    result = st.session_state[cache_key]
+    viable = result["viable"]
+    best_attempt = result["best_attempt"]
+    shown_target, shown_years = cached_args if cached_args else args_now
+
+    if result["now_low"] == 0:
+        st.info("There are no families in the lowest income level here — nothing to plan for.")
+        return
+
+    if viable:
+        pick = viable[0]
+        st.markdown(
+            f"<div style='padding:14px 16px;background:linear-gradient(135deg,"
+            f"rgba(27,139,78,0.12),rgba(74,14,46,0.06));"
+            f"border-left:4px solid #1b8b4e;border-radius:10px;margin-bottom:12px;'>"
+            f"<div style='font-size:11px;font-weight:700;text-transform:uppercase;"
+            f"letter-spacing:0.5px;color:#1b8b4e;'>★ Recommended plan</div>"
+            f"<div style='font-size:14px;color:#2d1020;margin-top:6px;line-height:1.55;'>"
+            f"The simplest plan that reaches your goal of helping "
+            f"<strong>at least {shown_target}%</strong> of the poorest "
+            f"families move up within {shown_years} years. This plan is "
+            f"expected to help <strong>{pick['reduction_pct']:.0f}%</strong> "
+            f"of them — close to your goal. It uses "
+            f"<strong>{pick['cost']}</strong> out of 300 push points, and "
+            f"was the easiest of {len(viable)} plans that work.</div>"
+            f"<div style='margin-top:10px;font-size:14px;'>"
+            f"<span style='color:{DIM_COLOR['financial']};font-weight:700;'>"
+            f"Financial help {pick['fin']}%</span> &nbsp;·&nbsp; "
+            f"<span style='color:{DIM_COLOR['education']};font-weight:700;'>"
+            f"Education support {pick['edu']}%</span> &nbsp;·&nbsp; "
+            f"<span style='color:{DIM_COLOR['livelihood']};font-weight:700;'>"
+            f"Livelihood &amp; family {pick['liv']}%</span></div></div>",
+            unsafe_allow_html=True,
+        )
+    else:
+        pick = best_attempt
+        st.markdown(
+            f"<div style='padding:14px 16px;background:rgba(198,40,40,0.08);"
+            f"border-left:4px solid #c62828;border-radius:10px;margin-bottom:12px;'>"
+            f"<div style='font-size:11px;font-weight:700;text-transform:uppercase;"
+            f"letter-spacing:0.5px;color:#c62828;'>Goal too high to reach</div>"
+            f"<div style='font-size:14px;color:#2d1020;margin-top:6px;line-height:1.55;'>"
+            f"None of the plans we tried can reach "
+            f"<strong>{shown_target}%</strong> within {shown_years} years. "
+            f"The best we can do is help "
+            f"<strong>{pick['reduction_pct']:.0f}%</strong> of the poorest "
+            f"families move up, by pushing Financial help "
+            f"{pick['fin']}%, Education support {pick['edu']}%, and "
+            f"Livelihood &amp; family {pick['liv']}%. Try lowering your "
+            f"goal a bit, or giving the plan more years."
+            f"</div></div>",
+            unsafe_allow_html=True,
+        )
+
+    fin, edu, liv = pick["fin"], pick["edu"], pick["liv"]
+    years = shown_years
+
+    st.markdown(
+        "<div class='muted' style='font-size:12px;margin-top:4px;margin-bottom:6px;'>"
+        "Here is how this plan would be carried out — each program below "
+        "shows how strongly it should be rolled out:"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+    dim_intensity = {"financial": fin, "education": edu, "livelihood": liv}
     program_rows = [programs[i:i+2] for i in range(0, len(programs), 2)]
     for row in program_rows:
         cols = st.columns(len(row))
@@ -750,11 +1093,12 @@ def render_intervention_plan(brgy_name, families_df, model_pipeline, features,
                 prio = p.get("priority", "Medium")
                 pc = PRIORITY_COLOR.get(prio, "#9b3b6b")
                 dom = p["dominant"]
+                intensity = dim_intensity[dom]
                 dim_chip = (
                     f"<span style='background:{DIM_COLOR[dom]};color:#fff;"
                     f"font-size:10px;font-weight:700;padding:2px 8px;"
                     f"border-radius:999px;text-transform:uppercase;"
-                    f"letter-spacing:0.4px;'>{DIM_LABEL[dom]}</span>"
+                    f"letter-spacing:0.4px;'>{DIM_LABEL[dom]} · {intensity}%</span>"
                 )
                 st.markdown(
                     f"<div style='background:rgba(255,255,255,0.85);"
@@ -765,8 +1109,7 @@ def render_intervention_plan(brgy_name, families_df, model_pipeline, features,
                     f"align-items:baseline;margin-bottom:4px;'>"
                     f"<span style='font-size:10px;font-weight:700;"
                     f"text-transform:uppercase;letter-spacing:0.5px;color:{pc};'>"
-                    f"{prio}</span>"
-                    f"{dim_chip}</div>"
+                    f"{prio}</span>{dim_chip}</div>"
                     f"<div style='font-weight:700;font-size:13px;color:#2d1020;"
                     f"line-height:1.3;'>{p.get('name','')}</div>"
                     f"<div style='font-size:11px;color:#9b3b6b;margin-top:2px;'>"
@@ -775,42 +1118,57 @@ def render_intervention_plan(brgy_name, families_df, model_pipeline, features,
                     f"line-height:1.5;'>{p.get('rationale','')}</div></div>",
                     unsafe_allow_html=True,
                 )
-                st.slider(
-                    "Implementation level",
-                    0, 100, key=p["_key"],
-                    label_visibility="collapsed",
+
+    if len(viable) > 1:
+        n_alts = min(len(viable) - 1, 4)
+        base_cost = viable[0]["cost"]
+        with st.expander(f"Show {n_alts} other plan{'s' if n_alts > 1 else ''} "
+                          f"that also reach this goal"):
+            st.markdown(
+                "<div class='muted' style='font-size:12px;margin-bottom:8px;"
+                "line-height:1.55;'>"
+                "Each of these plans also meets your target. They are listed "
+                "in case the recommended plan above does not fit your "
+                "situation — for example, if one agency cannot roll out its "
+                "program at the suggested level and another can take up the "
+                "slack."
+                "</div>",
+                unsafe_allow_html=True,
+            )
+            plan_labels = ["B", "C", "D", "E"]
+            for idx, alt in enumerate(viable[1:1 + n_alts]):
+                extra = alt["cost"] - base_cost
+                if extra == 0:
+                    tag = "same total intensity as the recommended plan"
+                elif extra <= 25:
+                    tag = "a little more intense than the recommended plan"
+                elif extra <= 75:
+                    tag = "noticeably more intense"
+                else:
+                    tag = "much more intense"
+                st.markdown(
+                    f"<div style='padding:10px 14px;margin:6px 0;"
+                    f"background:rgba(255,255,255,0.7);border-radius:10px;"
+                    f"font-size:13px;line-height:1.55;'>"
+                    f"<div style='display:flex;justify-content:space-between;"
+                    f"align-items:baseline;margin-bottom:4px;'>"
+                    f"<span style='font-weight:700;color:#4a0e2e;'>"
+                    f"Plan {plan_labels[idx]}</span>"
+                    f"<span class='muted' style='font-size:11px;'>{tag}</span>"
+                    f"</div>"
+                    f"<div style='color:#2d1020;'>"
+                    f"Helps <strong>{alt['reduction_pct']:.0f}%</strong> of "
+                    f"Low-tier families move to a higher income group."
+                    f"</div>"
+                    f"<div style='margin-top:6px;font-size:12px;'>"
+                    f"<span style='color:{DIM_COLOR['financial']};font-weight:700;'>"
+                    f"Financial {alt['fin']}%</span> &nbsp;·&nbsp; "
+                    f"<span style='color:{DIM_COLOR['education']};font-weight:700;'>"
+                    f"Education {alt['edu']}%</span> &nbsp;·&nbsp; "
+                    f"<span style='color:{DIM_COLOR['livelihood']};font-weight:700;'>"
+                    f"Livelihood {alt['liv']}%</span></div></div>",
+                    unsafe_allow_html=True,
                 )
-
-    years_col, info_col = st.columns([0.5, 2])
-    years = years_col.select_slider("Horizon (years)", options=[3, 4, 5], value=5)
-
-    active = [
-        {"intensity": st.session_state[p["_key"]], "weights": p["weights"],
-         "name": p.get("name", "")}
-        for p in programs
-    ]
-    fin = _combine_dim(active, "financial")
-    edu = _combine_dim(active, "education")
-    liv = _combine_dim(active, "livelihood")
-
-    info_col.markdown(
-        f"<div style='padding:10px 12px;background:rgba(252,228,236,0.55);"
-        f"border-radius:8px;font-size:12px;line-height:1.6;'>"
-        f"<strong style='color:#4a0e2e;'>Combined effect on the simulator</strong> "
-        f"&nbsp;<span class='muted'>(weighted avg of program dials × dimension weights)</span><br>"
-        f"<span style='color:{DIM_COLOR['financial']};font-weight:700;'>Financial {fin:.0f}%</span>"
-        f" &nbsp;·&nbsp; "
-        f"<span style='color:{DIM_COLOR['education']};font-weight:700;'>Education {edu:.0f}%</span>"
-        f" &nbsp;·&nbsp; "
-        f"<span style='color:{DIM_COLOR['livelihood']};font-weight:700;'>Livelihood {liv:.0f}%</span>"
-        f"</div>",
-        unsafe_allow_html=True,
-    )
-
-    brgy_families = families_df[families_df["barangay"] == brgy_name].copy()
-    if brgy_families.empty:
-        st.warning("No family records for this barangay.")
-        return
 
     projected = simulate_intervention(brgy_families, fin, edu, liv, years)
     now_tiers = predict_tier(model_pipeline, features, brgy_families)
@@ -835,8 +1193,9 @@ def render_intervention_plan(brgy_name, families_df, model_pipeline, features,
         if c is None:
             return ""
         return (f"<div class='muted' style='font-size:12px;margin-top:6px;'>"
-                f"Model is sure about <strong>{c['confident_pct']:.0f}%</strong> of "
-                f"families · the rest are borderline between two tiers.</div>")
+                f"The tool is sure about <strong>{c['confident_pct']:.0f}%</strong> "
+                f"of families · the rest could go either way between two income "
+                f"levels.</div>")
 
     st.markdown("<div style='height:14px;'></div>", unsafe_allow_html=True)
     col_now, col_fut = st.columns(2)
@@ -845,7 +1204,7 @@ def render_intervention_plan(brgy_name, families_df, model_pipeline, features,
             f"<div class='kpi'><div class='k'>Now</div>"
             f"<div style='margin-top:8px;'>"
             f"<span class='tier-chip' style='background:{CLASS_COLORS[now_dom]};'>{now_dom}</span>"
-            f"<span class='muted' style='margin-left:8px;'>{len(brgy_families)} families</span>"
+            f"<span class='muted' style='margin-left:8px;'>most common income level today</span>"
             f"</div>{conf_line(now_conf)}"
             f"<div style='margin-top:14px;'>{_tier_breakdown(now_tiers)}</div></div>",
             unsafe_allow_html=True,
@@ -858,7 +1217,7 @@ def render_intervention_plan(brgy_name, families_df, model_pipeline, features,
             f"<div style='color:{vcolor};font-weight:700;font-size:12px;'>{verdict}</div></div>"
             f"<div style='margin-top:8px;'>"
             f"<span class='tier-chip' style='background:{CLASS_COLORS[fut_dom]};'>{fut_dom}</span>"
-            f"<span class='muted' style='margin-left:8px;'>projected dominant tier</span>"
+            f"<span class='muted' style='margin-left:8px;'>expected most common income level</span>"
             f"</div>{conf_line(fut_conf)}"
             f"<div style='margin-top:14px;'>{_tier_breakdown(fut_tiers)}</div></div>",
             unsafe_allow_html=True,
@@ -873,21 +1232,20 @@ def render_intervention_plan(brgy_name, families_df, model_pipeline, features,
             if m["moved_up"] > 0:
                 badges.append(f"<span style='color:#1b8b4e;font-weight:600;'>↑ {m['moved_up']} moved up</span>")
             if m["stayed"] > 0:
-                badges.append(f"<span class='muted'>= {m['stayed']} stayed</span>")
+                badges.append(f"<span class='muted'>= {m['stayed']} stayed the same</span>")
             if m["moved_down"] > 0:
                 badges.append(f"<span style='color:#c62828;font-weight:600;'>↓ {m['moved_down']} moved down</span>")
             move_rows.append(
                 f"<div style='display:flex;justify-content:space-between;align-items:center;"
                 f"padding:9px 0;border-bottom:1px solid #fce4ec;font-size:13px;'>"
                 f"<span><span class='tier-chip' style='background:{CLASS_COLORS[m['from']]};"
-                f"font-size:11px;padding:2px 8px;'>Started {m['from']}</span> "
-                f"<span class='muted'>· {m['n']} families</span></span>"
+                f"font-size:11px;padding:2px 8px;'>Started at {m['from']}</span></span>"
                 f"<span>{'  ·  '.join(badges)}</span></div>"
             )
         st.markdown(
-            f"<div class='kpi'><div class='k'>Where families moved</div>"
+            f"<div class='kpi'><div class='k'>How families moved</div>"
             f"<div class='muted' style='margin-top:4px;'>"
-            f"How each starting tier shifts under the chosen program mix.</div>"
+            f"For each starting income level, how families shifted under this plan.</div>"
             f"<div style='margin-top:10px;'>{''.join(move_rows)}</div></div>",
             unsafe_allow_html=True,
         )
@@ -909,9 +1267,9 @@ def render_intervention_plan(brgy_name, families_df, model_pipeline, features,
             f"</span></div>"
         )
     st.markdown(
-        f"<div class='kpi'><div class='k'>Key indicator changes</div>"
+        f"<div class='kpi'><div class='k'>Key changes</div>"
         f"<div class='muted' style='margin-top:4px;'>"
-        f"Average values before and after the {years}-year projection.</div>"
+        f"How the average numbers change after {years} years under this plan.</div>"
         f"<div style='margin-top:10px;'>{''.join(change_rows)}</div></div>",
         unsafe_allow_html=True,
     )
@@ -986,7 +1344,7 @@ def render_whatif(brgy_name, families_df, model_pipeline, features, conformal=No
             f"<div class='k'>Now</div>"
             f"<div style='margin-top:8px;'>"
             f"<span class='tier-chip' style='background:{CLASS_COLORS[now_dom]};'>{now_dom}</span>"
-            f"<span class='muted' style='margin-left:8px;'>{len(brgy_families)} families</span>"
+            f"<span class='muted' style='margin-left:8px;'>current dominant tier</span>"
             f"</div>"
             f"{conf_line(now_conf)}"
             f"<div style='margin-top:14px;'>{_tier_breakdown(now_tiers)}</div>"
@@ -1032,8 +1390,7 @@ def render_whatif(brgy_name, families_df, model_pipeline, features, conformal=No
                 f"<div style='display:flex;justify-content:space-between;align-items:center;"
                 f"padding:9px 0;border-bottom:1px solid #fce4ec;font-size:13px;'>"
                 f"<span><span class='tier-chip' style='background:{CLASS_COLORS[m['from']]};"
-                f"font-size:11px;padding:2px 8px;'>Started {m['from']}</span> "
-                f"<span class='muted'>· {m['n']} families</span></span>"
+                f"font-size:11px;padding:2px 8px;'>Started {m['from']}</span></span>"
                 f"<span>{'  ·  '.join(badges)}</span>"
                 f"</div>"
             )
@@ -1101,11 +1458,12 @@ st.markdown("<hr class='rule'>", unsafe_allow_html=True)
 
 with st.sidebar:
     st.markdown("### Controls")
-    st.markdown(f"<span class='muted'>Model · {model_name}</span>", unsafe_allow_html=True)
+    st.markdown(f"<span class='muted'>Tool · {model_name}</span>", unsafe_allow_html=True)
     if conformal_emp is not None:
         st.markdown(
-            f"<span class='muted'>Conformal · {conformal_emp:.0%} empirical "
-            f"coverage (target {conformal_target:.0%})</span>",
+            f"<span class='muted'>Gets it right about "
+            f"<strong>{conformal_emp:.0%}</strong> of the time "
+            f"(goal was {conformal_target:.0%})</span>",
             unsafe_allow_html=True,
         )
     selector = st.selectbox(
@@ -1114,15 +1472,42 @@ with st.sidebar:
         index=0,
     )
     st.markdown("<hr class='rule'>", unsafe_allow_html=True)
-    st.markdown("**Tiers**")
-    for c in CLASS_ORDER:
+    st.markdown(
+        "**Type of barangay** &nbsp;<span style='font-size:10px;"
+        "color:#9b3b6b;'>3 levels</span>",
+        unsafe_allow_html=True,
+    )
+    _community_rules = {
+        "priority":   "top-third most vulnerable in District V",
+        "developing": "middle-third — actively in transition",
+        "stable":     "bottom-third — lowest vulnerability in District V",
+    }
+    for key in COMMUNITY_CLASS_ORDER:
         st.markdown(
-            f"<div style='margin:4px 0;'>"
-            f"<span class='tier-chip' style='background:{CLASS_COLORS[c]};'>{c}</span> "
-            f"<span class='muted'>{CLASS_TIER[c]} · Lv {CLASS_ORDER.index(c)+1}</span>"
+            f"<div style='margin:5px 0;'>"
+            f"<span class='tier-chip' style='background:{COMMUNITY_COLORS[key]};'>"
+            f"{COMMUNITY_SHORT[key]}</span><br>"
+            f"<span class='muted' style='font-size:11px;'>"
+            f"{_community_rules[key]}</span>"
             f"</div>",
             unsafe_allow_html=True,
         )
+    st.markdown(
+        "<div class='muted' style='font-size:11px;margin-top:8px;"
+        "line-height:1.45;'>"
+        "<strong>How we decide:</strong> all 14 District V barangays are "
+        "ranked by a vulnerability score — number of poor families per "
+        "1,000 residents, weighted by how few are moving up. The bottom-"
+        "third is Stable, the middle-third Developing, the top-third "
+        "Priority.<br>"
+        "<strong>Why peer ranking:</strong> Quezon City's overall family "
+        f"poverty rate is just <strong>{QC_BASELINE_POVERTY_PCT:.1f}%</strong> "
+        "(PSA, 2023), so absolute cut-offs give every QC barangay the "
+        "same label. Ranking inside District V mirrors how PSA Small "
+        "Area Estimation is used by LGUs for prioritization."
+        "</div>",
+        unsafe_allow_html=True,
+    )
 
 if "selected_brgy" not in st.session_state:
     st.session_state.selected_brgy = None
@@ -1147,15 +1532,20 @@ with right:
     else:
         row = brgy[brgy["barangay"] == selected].iloc[0]
         cls = row["predicted_class"]
+        community_key = row.get("community_class", "developing")
+        community_label = COMMUNITY_LABELS.get(community_key, "—")
+        community_color = COMMUNITY_COLORS.get(community_key, "#f57c00")
         st.markdown(
             f"<div class='brgy-head'>"
             f"<h2>{selected}</h2>"
-            f"<span class='tier-chip' style='background:{CLASS_COLORS[cls]};'>{cls}</span>"
-            f"</div>"
-            f"<div class='muted'>{int(row['families_surveyed'])} families surveyed</div>",
+            f"<span class='tier-chip' style='background:{community_color};'>"
+            f"{community_label}</span>"
+            f"</div>",
             unsafe_allow_html=True,
         )
-        st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
+        render_classification_report(row, community_key)
+        st.markdown("<div style='height:14px;'></div>", unsafe_allow_html=True)
         render_indicators(row)
         st.markdown("<div style='height:14px;'></div>", unsafe_allow_html=True)
         render_shap_panel(selected, cls, shap_df)
