@@ -45,14 +45,14 @@ CLASS_TIER = {"Low": "Survival", "Middle": "Subsistence", "High": "Self-sufficie
 #       default narrative for any QC barangay is *not* "Low-Income".
 COMMUNITY_CLASS_ORDER = ["priority", "developing", "stable"]
 COMMUNITY_LABELS = {
-    "priority":   "Level 1 · Priority Barangay (Most Vulnerable in District V)",
-    "developing": "Level 2 · Developing Barangay",
-    "stable":     "Level 3 · Stable Barangay (Lowest Vulnerability in District V)",
+    "priority":   "Level 1 · Low-Income Barangay (Top Priority for Assistance)",
+    "developing": "Level 2 · Mixed-Income Barangay (Moderate Priority for Assistance)",
+    "stable":     "Level 3 · Higher-Income Barangay (Low Priority for Assistance)",
 }
 COMMUNITY_SHORT = {
-    "priority":   "Level 1 · Priority",
-    "developing": "Level 2 · Developing",
-    "stable":     "Level 3 · Stable",
+    "priority":   "Level 1 · Low-Income",
+    "developing": "Level 2 · Mixed-Income",
+    "stable":     "Level 3 · Higher-Income",
 }
 COMMUNITY_COLORS = {
     "priority":   "#B91C1C",
@@ -503,30 +503,34 @@ def render_classification_report(row, community_key):
 
     if community_key == "priority":
         why_html = (
-            f"Among the <strong>most vulnerable</strong> in District V "
+            f"<strong>Low-Income Barangay</strong> — among the highest "
+            f"concentration of low-income families in District V "
             f"({rank_text}). <strong>{density:.1f}</strong> poor families "
             f"per 1,000 residents, only <strong>{transition:.1f}%</strong> "
-            f"moving up — <em>top priority</em> for support."
+            f"moving up — <em>top priority</em> for assistance."
         )
     elif community_key == "stable":
         why_html = (
-            f"Among the <strong>least vulnerable</strong> in District V "
+            f"<strong>Higher-Income Barangay</strong> — among the lowest "
+            f"concentration of low-income families in District V "
             f"({rank_text}). <strong>{density:.1f}</strong> poor families "
             f"per 1,000 residents, <strong>{transition:.1f}%</strong> "
-            f"moving up — <em>lower priority</em>, maintain existing 4Ps."
+            f"moving up — <em>low priority</em>, maintain existing 4Ps."
         )
     else:
         why_html = (
-            f"<strong>Middle of the District V ranking</strong> ({rank_text}). "
+            f"<strong>Mixed-Income Barangay</strong> — middle of the "
+            f"District V ranking ({rank_text}). "
             f"<strong>{density:.1f}</strong> poor families per 1,000 "
             f"residents, <strong>{transition:.1f}%</strong> moving up — "
-            f"actively in transition."
+            f"<em>moderate priority</em> for assistance."
         )
 
     source_html = (
-        "<strong>Method:</strong> 14 barangays ranked by vulnerability "
-        "score (poor families per 1,000, weighted by how few move up). "
-        "Bottom-third = Stable, middle = Developing, top = Priority. "
+        "<strong>Method:</strong> the 14 barangays are ranked by a score "
+        "(poor families per 1,000 residents, weighted by how few move up). "
+        "Bottom-third = Level 3 (Higher-Income), middle = Level 2 "
+        "(Mixed-Income), top = Level 1 (Low-Income). "
         f"QC's overall poverty rate is only "
         f"<strong>{QC_BASELINE_POVERTY_PCT:.1f}%</strong> (PSA, 2023), "
         "so peer ranking is used — same approach as PSA Small Area "
@@ -642,7 +646,7 @@ def render_district_map(brgy, *, height=520, key="brgy_map", focus=None):
         },
         custom_data=["barangay"],
         labels={
-            "community_label": "Type of barangay",
+            "community_label": "Income Level",
             "pocket_density_per_1k": "4Ps families per 1,000 residents",
             "transition_rate_pct": "Share of 4Ps families moving up (%)",
             "avg_per_capita_income": "Monthly income per person (₱)",
@@ -660,7 +664,7 @@ def render_district_map(brgy, *, height=520, key="brgy_map", focus=None):
     fig.update_layout(
         margin={"r": 0, "t": 0, "l": 0, "b": 0},
         height=height,
-        legend_title_text="Type of barangay",
+        legend_title_text="Income Level",
         legend={
             "bgcolor": "rgba(255,255,255,0.95)",
             "bordercolor": "#E5E0D8",
@@ -1556,13 +1560,13 @@ with st.sidebar:
     st.markdown(
         "<div style='font-weight:700;font-size:17px;color:#1A1F2E;"
         "text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;'>"
-        "Barangay types</div>",
+        "Income Levels</div>",
         unsafe_allow_html=True,
     )
     _community_rules = {
-        "priority":   "top-third most vulnerable",
-        "developing": "middle-third, in transition",
-        "stable":     "bottom-third, lowest vulnerability",
+        "priority":   "top-third — highest concentration of low-income families",
+        "developing": "middle-third — mixed-income, in transition",
+        "stable":     "bottom-third — lowest concentration of low-income families",
     }
     for key in COMMUNITY_CLASS_ORDER:
         st.markdown(
@@ -1576,8 +1580,9 @@ with st.sidebar:
         )
     st.markdown(
         "<div class='muted' style='margin-top:12px;'>"
-        "14 barangays ranked by poor families per 1,000 (weighted by "
-        "few moving up). QC's overall poverty is just "
+        "The 14 barangays are ranked by poor families per 1,000 residents "
+        "(weighted by how few move up), then split into thirds. QC's "
+        "overall poverty is just "
         f"<strong>{QC_BASELINE_POVERTY_PCT:.1f}%</strong> (PSA, 2023), "
         "so peer ranking is used — same as PSA Small Area Estimation."
         "</div>",
