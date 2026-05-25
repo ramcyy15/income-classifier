@@ -873,6 +873,31 @@ def _dominant_dim(weights):
     return max(weights.items(), key=lambda kv: kv[1])[0]
 
 
+def compute_ceiling(families, years, model, features, grid_step=25):
+    """Highest % of Low-tier families that ANY mix can move up for this
+    barangay over `years` years. Same grid as goal_seek_intervention.
+
+    Used to set the target slider's max_value dynamically — so the user
+    can never set an unreachable goal, and the cap has a derivation
+    instead of being a magic number."""
+    now_tiers = predict_tier(model, features, families)
+    now_low = int((pd.Series(now_tiers) == "Low").sum())
+    if now_low == 0:
+        return 0.0
+    grid = list(range(0, 101, grid_step))
+    best = 0.0
+    for f in grid:
+        for e in grid:
+            for l in grid:
+                projected = simulate_intervention(families, f, e, l, years)
+                fut_tiers = predict_tier(model, features, projected)
+                fut_low = int((pd.Series(fut_tiers) == "Low").sum())
+                reduction = (now_low - fut_low) / now_low * 100.0
+                if reduction > best:
+                    best = reduction
+    return best
+
+
 def goal_seek_intervention(families, target_low_reduction_pct, years,
                             model, features, grid_step=25):
     """Inverse simulation: brute-force search across (financial, education,
@@ -1023,28 +1048,52 @@ def render_intervention_plan(brgy_name, families_df, model_pipeline, features,
         st.warning("No family records for this barangay.")
         return
 
+    years_key = f"goal_years_{brgy_name}"
+    years_for_ceiling = int(st.session_state.get(years_key, 5))
+    ceiling_cache_key = f"goal_ceiling_{brgy_name}_{years_for_ceiling}"
+    if ceiling_cache_key not in st.session_state:
+        with st.spinner(f"Estimating reachable range for {brgy_name}…"):
+            st.session_state[ceiling_cache_key] = compute_ceiling(
+                brgy_families, years_for_ceiling, model_pipeline, features,
+            )
+    ceiling_raw = float(st.session_state[ceiling_cache_key])
+    ceiling_pct = max(5, (int(ceiling_raw) // 5) * 5)
+
+    if ceiling_raw <= 0:
+        st.info("No Low-tier families here — nothing to plan for.")
+        return
+
+    target_state_key = f"goal_target_{brgy_name}"
+    if (target_state_key in st.session_state
+            and st.session_state[target_state_key] > ceiling_pct):
+        st.session_state[target_state_key] = ceiling_pct
+    default_target = min(ceiling_pct, max(5, (ceiling_pct // 2 // 5) * 5))
+
     st.markdown(
-        "<div style='padding:14px 16px;background:rgba(244,239,229,0.7);"
-        "border-left:4px solid #2A4365;border-radius:10px;font-size:15px;"
-        "line-height:1.6;margin-bottom:16px;'>"
-        "<div style='font-size:13px;font-weight:700;text-transform:uppercase;"
-        "letter-spacing:0.6px;color:#2A4365;margin-bottom:6px;'>"
-        "Goal-based planning</div>"
-        "<div style='color:#1A1F2E;'>Set a target — we'll find the lightest "
-        "program mix that reaches it.</div></div>",
+        f"<div style='padding:14px 16px;background:rgba(244,239,229,0.7);"
+        f"border-left:4px solid #2A4365;border-radius:10px;font-size:15px;"
+        f"line-height:1.6;margin-bottom:16px;'>"
+        f"<div style='font-size:13px;font-weight:700;text-transform:uppercase;"
+        f"letter-spacing:0.6px;color:#2A4365;margin-bottom:6px;'>"
+        f"Goal-based planning</div>"
+        f"<div style='color:#1A1F2E;'>Set a target — we'll find the lightest "
+        f"program mix that reaches it. Slider is capped at "
+        f"<strong>{ceiling_pct}%</strong>, the highest reduction the model "
+        f"can produce here in {years_for_ceiling} years.</div></div>",
         unsafe_allow_html=True,
     )
 
     g1, g2, g3 = st.columns([1.6, 0.7, 0.5])
     target_pct = g1.slider(
         "Target: % of poorest families to move up",
-        min_value=5, max_value=60, value=25, step=5,
-        key=f"goal_target_{brgy_name}",
-        help="We'll search program mixes for the lightest one that hits this target.",
+        min_value=5, max_value=ceiling_pct, value=default_target, step=5,
+        key=target_state_key,
+        help=f"Capped at {ceiling_pct}% — the reachable ceiling for this "
+             f"barangay over {years_for_ceiling} years.",
     )
     years = g2.select_slider(
-        "Time (years)", options=[3, 4, 5], value=5,
-        key=f"goal_years_{brgy_name}",
+        "Time (years)", options=[3, 4, 5], value=years_for_ceiling,
+        key=years_key,
     )
     g3.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
     solve_clicked = g3.button("★ Solve", use_container_width=True,
