@@ -78,8 +78,10 @@ def assign_district_tertiles(df):
     marginalized pocket that is also stuck scores higher than a large
     pocket that is actively moving up.
 
-    With 14 barangays the split is 5 / 4 / 5: bottom-five by score get
-    "stable", middle four get "developing", top-five get "priority".
+    With 14 barangays and cuts at (n/3, 2n/3) = (4.667, 9.333),
+    the split is 4 / 5 / 5: bottom-four by score (ranks 1-4) get
+    "stable", middle-five (ranks 5-9) get "developing", top-five
+    (ranks 10-14) get "priority".
     """
     score = (
         df["pocket_density_per_1k"].fillna(0)
@@ -270,6 +272,35 @@ def load_geo():
 @st.cache_resource
 def load_model():
     return joblib.load(MODEL_PATH)
+
+
+@st.cache_data
+def load_metrics():
+    """Honest hold-out performance, parsed from the saved evaluation artifacts.
+
+    Returns (accuracy, within_one_tier). `within_one_tier` is the share of
+    predictions that land on the correct tier OR an adjacent one — a fair
+    metric here because the income levels are ordered (Low < Middle < High),
+    so a Low↔Middle miss is far less wrong than a Low↔High flip.
+    """
+    accuracy = None
+    report = OUT / "stacking_classification_report.txt"
+    if report.exists():
+        first = report.read_text(encoding="utf-8").splitlines()[0]
+        try:
+            accuracy = float(first.split(":")[1])
+        except (IndexError, ValueError):
+            accuracy = None
+
+    within = None
+    cm_path = OUT / "stacking_confusion_matrix.csv"
+    if cm_path.exists():
+        cm = pd.read_csv(cm_path, index_col=0).to_numpy()
+        total = cm.sum()
+        if total:
+            two_tier_errors = cm[0, -1] + cm[-1, 0]  # Low↔High only
+            within = (total - two_tier_errors) / total
+    return accuracy, within
 
 
 def inject_styles():
@@ -1543,12 +1574,56 @@ st.markdown("<hr class='rule'>", unsafe_allow_html=True)
 
 with st.sidebar:
     st.markdown("### Controls")
-    st.markdown(f"<div class='muted'>Model · {model_name}</div>", unsafe_allow_html=True)
+    acc, within = load_metrics()
+
+    def _stat(value, label, color):
+        return (
+            f"<div style='flex:1;text-align:center;'>"
+            f"<div style='font-family:\"Plus Jakarta Sans\",Inter,sans-serif;"
+            f"font-size:25px;font-weight:700;color:{color};line-height:1.05;'>{value}</div>"
+            f"<div style='font-size:11px;color:#6B7280;text-transform:uppercase;"
+            f"letter-spacing:0.4px;margin-top:4px;'>{label}</div></div>"
+        )
+
+    stats = ""
+    if acc is not None:
+        stats += _stat(f"{acc:.0%}", "Accuracy", "#1A1F2E")
+    if within is not None:
+        stats += _stat(f"{within:.0%}", "Within 1 tier", "#166534")
     if conformal_emp is not None:
+        stats += _stat(f"{conformal_emp:.0%}", "Coverage", "#2A4365")
+
+    st.markdown(
+        f"<div class='kpi' style='padding:14px 16px;margin-top:8px;'>"
+        f"<div class='k'>Model</div>"
+        f"<div style='font-size:15px;font-weight:600;color:#1A1F2E;margin-top:3px;"
+        f"line-height:1.3;'>{model_name}</div>"
+        f"<div style='display:flex;gap:8px;margin-top:14px;'>{stats}</div>"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+
+    chips = "".join(
+        f"<span style='font-size:12px;font-weight:600;color:#2A4365;background:#EEF2F7;"
+        f"border:1px solid #DCE3ED;border-radius:999px;padding:4px 11px;'>{c}</span>"
+        for c in ("4Ps income", "4Ps education", "population")
+    )
+    st.markdown(
+        f"<div style='margin:10px 0 16px;display:flex;flex-wrap:wrap;gap:6px;'>{chips}</div>",
+        unsafe_allow_html=True,
+    )
+
+    target_txt = f" (target {conformal_target:.0%})" if conformal_target else ""
+    with st.expander("Why these numbers?"):
         st.markdown(
-            f"<div class='muted'>Accuracy "
-            f"<strong>{conformal_emp:.0%}</strong> "
-            f"(target {conformal_target:.0%})</div>",
+            "<div class='muted' style='font-size:15px;line-height:1.55;'>"
+            "Income itself is excluded — it defines the label — so tiers are "
+            "predicted from family &amp; community proxies, a genuinely hard task. "
+            "Most misses land on an adjacent tier, so the "
+            "<strong>within-one-tier</strong> figure is the fair read. "
+            f"Coverage is the conformal prediction-set coverage{target_txt}, "
+            "not accuracy."
+            "</div>",
             unsafe_allow_html=True,
         )
     selector = st.selectbox(
