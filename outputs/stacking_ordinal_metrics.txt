@@ -2,18 +2,18 @@ Ordinal evaluation - income-level classifier (hold-out, n=909)
 Tiers coded Low=0, Middle=1, High=2 (ordered).
 
 Classification context:
-  Exact accuracy        : 0.4939
-  Within-one-tier acc.  : 0.8427
+  Exact accuracy        : 0.4994
+  Within-one-tier acc.  : 0.8460
 
 Ordinal error metrics (lower is better):
-  MAE   : 0.6634  (mean absolute tier error)
-  MSE   : 0.9780
-  RMSE  : 0.9889  (tiers)
+  MAE   : 0.6546  (mean absolute tier error)
+  MSE   : 0.9626
+  RMSE  : 0.9811  (tiers)
 
 MASE-style (model MAE / naive MAE):
   naive  = always predict majority tier (High)
   naive MAE : 0.6260
-  MASE      : 1.0598   (>1 = worse than naive)
+  MASE      : 1.0457   (>1 = worse than naive)
 
 NOTES:
   - MASE is natively a time-series metric; this is a cross-sectional

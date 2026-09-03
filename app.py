@@ -308,183 +308,203 @@ def inject_styles():
         """
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700&display=swap" rel="stylesheet">
         <style>
         html, body, [class*="css"], [data-testid="stAppViewContainer"] {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            color: #1A1F2E;
-            font-size: 21px;
-            line-height: 1.6;
+            color: #0F172A;
+            font-size: 15px;
+            line-height: 1.5;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
         [data-testid="stAppViewContainer"] {
-            background: linear-gradient(180deg, #FAF8F2 0%, #F7F5F0 100%);
+            background: #F8FAFC;
         }
         [data-testid="stHeader"] { background: transparent; }
         [data-testid="stSidebar"] {
-            background: #FBFAF6;
-            border-right: 1px solid #E5E0D8;
+            background: #FFFFFF;
+            border-right: 1px solid #E2E8F0;
         }
-        [data-testid="stSidebar"] * { color: #1A1F2E; }
+        [data-testid="stSidebar"] * { color: #0F172A; }
         [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2,
         [data-testid="stSidebar"] h3, [data-testid="stSidebar"] h4 {
-            color: #1A1F2E !important;
+            color: #0F172A !important;
         }
         h1 {
             font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif !important;
-            color: #1A1F2E !important; font-weight: 700 !important;
-            letter-spacing: -0.6px; line-height: 1.1;
-            font-size: 54px !important;
-            margin-bottom: 8px !important;
+            color: #0F172A !important; font-weight: 700 !important;
+            letter-spacing: -0.5px; line-height: 1.15;
+            font-size: 28px !important;
+            margin-bottom: 4px !important;
         }
         h2 {
             font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif !important;
-            color: #1A1F2E !important; font-weight: 600 !important;
+            color: #0F172A !important; font-weight: 700 !important;
             letter-spacing: -0.3px;
-            font-size: 36px !important;
+            font-size: 22px !important;
         }
         h3 {
             font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif !important;
-            color: #1A1F2E !important; font-weight: 600 !important;
+            color: #0F172A !important; font-weight: 600 !important;
             letter-spacing: -0.2px;
-            font-size: 28px !important;
+            font-size: 18px !important;
         }
         h4 {
             font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif !important;
-            color: #1A1F2E !important; font-weight: 600 !important;
-            font-size: 24px !important;
+            color: #0F172A !important; font-weight: 600 !important;
+            font-size: 15px !important;
         }
-        p, li, span, div { font-size: 20px; }
-        [data-testid="stMarkdownContainer"] p { color: #3A4256; line-height: 1.7; font-size: 20px; }
+        p, li, span, div { font-size: 14px; }
+        [data-testid="stMarkdownContainer"] p { color: #334155; line-height: 1.5; font-size: 14px; }
         [data-testid="stMetric"] {
             background: #FFFFFF;
-            border: 1px solid #E5E0D8;
-            border-radius: 12px;
-            padding: 14px 16px;
-            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04),
-                        0 4px 12px -8px rgba(15, 23, 42, 0.08);
+            border: 1px solid #E2E8F0;
+            border-radius: 10px;
+            padding: 10px 14px;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
         }
         [data-testid="stMetricLabel"] p {
-            color: #6B7280 !important; font-weight: 700 !important;
-            font-size: 16px !important; text-transform: uppercase;
-            letter-spacing: 0.7px;
+            color: #64748B !important; font-weight: 600 !important;
+            font-size: 11px !important; text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         [data-testid="stMetricValue"] {
-            color: #1A1F2E !important; font-weight: 700 !important;
+            color: #0F172A !important; font-weight: 700 !important;
             font-family: 'Plus Jakarta Sans', 'Inter', sans-serif !important;
-            font-size: 36px !important;
+            font-size: 24px !important;
             letter-spacing: -0.3px;
         }
         [data-testid="stExpander"] {
             background: #FFFFFF;
-            border: 1px solid #E5E0D8;
-            border-radius: 12px;
-            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+            border: 1px solid #E2E8F0;
+            border-radius: 10px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
         }
         [data-testid="stExpander"] summary {
-            color: #1A1F2E; font-weight: 600;
-            font-size: 19px;
+            color: #0F172A; font-weight: 600;
+            font-size: 14px;
         }
         [data-testid="stDataFrame"] {
-            border-radius: 10px; overflow: hidden;
-            border: 1px solid #E5E0D8;
+            border-radius: 8px; overflow: hidden;
+            border: 1px solid #E2E8F0;
+        }
+        /* Tab Navigation styling */
+        [data-testid="stTabs"] [data-baseweb="tab-list"] {
+            gap: 8px;
+            border-bottom: 1px solid #E2E8F0;
+            padding-bottom: 4px;
+        }
+        [data-testid="stTabs"] [data-baseweb="tab"] {
+            height: 38px;
+            white-space: pre;
+            border-radius: 8px;
+            color: #64748B;
+            font-weight: 600;
+            font-size: 14px;
+            padding: 6px 14px;
+            background: transparent;
+            border: 1px solid transparent;
+        }
+        [data-testid="stTabs"] [aria-selected="true"] {
+            background: #FFFFFF !important;
+            color: #0F172A !important;
+            border-color: #CBD5E1 !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
         }
         /* Buttons */
         [data-testid="stBaseButton-secondary"],
         .stButton > button {
             background: #FFFFFF !important;
-            color: #1A1F2E !important;
-            border: 1px solid #CFC8BB !important;
-            border-radius: 10px !important;
+            color: #0F172A !important;
+            border: 1px solid #CBD5E1 !important;
+            border-radius: 8px !important;
             font-weight: 600 !important;
-            font-size: 18px !important;
-            padding: 12px 20px !important;
+            font-size: 13px !important;
+            padding: 6px 14px !important;
             transition: all 0.15s ease;
-            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
         }
         [data-testid="stBaseButton-secondary"]:hover,
         .stButton > button:hover {
-            background: #2A4365 !important;
+            background: #1E293B !important;
             color: #FFFFFF !important;
-            border-color: #2A4365 !important;
-            box-shadow: 0 4px 12px -4px rgba(42, 67, 101, 0.4);
+            border-color: #1E293B !important;
+            box-shadow: 0 2px 6px -1px rgba(30, 41, 59, 0.3);
         }
         /* Sliders */
         [data-testid="stSlider"] [data-baseweb="slider"] div[role="slider"] {
-            background: #2A4365 !important;
-            border-color: #2A4365 !important;
-            box-shadow: 0 2px 6px -2px rgba(42, 67, 101, 0.5) !important;
+            background: #1E293B !important;
+            border-color: #1E293B !important;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2) !important;
         }
         [data-testid="stSlider"] label {
-            color: #1A1F2E !important; font-weight: 600 !important; font-size: 18px !important;
+            color: #0F172A !important; font-weight: 600 !important; font-size: 13px !important;
         }
         [data-testid="stSlider"] [data-baseweb="slider"] {
-            font-size: 16px !important;
+            font-size: 12px !important;
         }
         /* Selectbox */
         [data-baseweb="select"] > div {
             background: #FFFFFF !important;
-            border: 1px solid #CFC8BB !important;
-            border-radius: 10px !important;
+            border: 1px solid #CBD5E1 !important;
+            border-radius: 8px !important;
         }
         [data-testid="stSelectbox"] label,
         [data-testid="stTextInput"] label {
-            color: #1A1F2E !important; font-weight: 600 !important; font-size: 18px !important;
+            color: #0F172A !important; font-weight: 600 !important; font-size: 13px !important;
         }
         [data-baseweb="select"] {
-            font-size: 18px !important;
+            font-size: 13px !important;
         }
         /* KPI card */
         .kpi {
             background: #FFFFFF;
-            border: 1px solid #E5E0D8;
-            border-radius: 14px;
-            padding: 18px 20px;
-            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04),
-                        0 6px 16px -10px rgba(15, 23, 42, 0.10);
+            border: 1px solid #E2E8F0;
+            border-radius: 10px;
+            padding: 14px 16px;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
         }
         .kpi .k {
-            font-size: 16px; text-transform: uppercase;
-            letter-spacing: 0.9px; color: #6B7280; font-weight: 700;
+            font-size: 11px; text-transform: uppercase;
+            letter-spacing: 0.6px; color: #64748B; font-weight: 700;
         }
         .kpi .v {
             font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
-            font-size: 40px; font-weight: 700; color: #1A1F2E;
-            line-height: 1.1; margin-top: 10px;
-            letter-spacing: -0.5px;
+            font-size: 26px; font-weight: 700; color: #0F172A;
+            line-height: 1.15; margin-top: 6px;
+            letter-spacing: -0.3px;
         }
         /* Brand pill */
         .pill {
-            display: inline-block; padding: 8px 16px;
-            border-radius: 999px; font-size: 15px;
-            font-weight: 700; letter-spacing: 0.7px;
-            background: #EEF2F7; color: #2A4365;
+            display: inline-block; padding: 4px 10px;
+            border-radius: 999px; font-size: 11px;
+            font-weight: 700; letter-spacing: 0.5px;
+            background: #F1F5F9; color: #334155;
             text-transform: uppercase;
-            border: 1px solid #DCE3ED;
+            border: 1px solid #E2E8F0;
         }
         /* Status / tier chips */
         .tier-chip {
-            display: inline-block; padding: 8px 16px;
-            border-radius: 999px; font-size: 17px;
-            font-weight: 700; letter-spacing: 0.3px; color: #fff;
-            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.10);
+            display: inline-block; padding: 4px 12px;
+            border-radius: 999px; font-size: 12px;
+            font-weight: 600; letter-spacing: 0.2px; color: #fff;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
         }
         .rule {
-            border: none; border-top: 1px solid #E5E0D8;
-            margin: 28px 0 20px 0;
+            border: none; border-top: 1px solid #E2E8F0;
+            margin: 16px 0;
         }
-        .muted { font-size: 18px; color: #6B7280; line-height: 1.6; }
+        .muted { font-size: 13px; color: #64748B; line-height: 1.45; }
         .brgy-head {
             display: flex; justify-content: space-between;
-            align-items: center; gap: 12px; margin-bottom: 6px;
+            align-items: center; gap: 10px; margin-bottom: 4px;
             flex-wrap: wrap;
         }
-        .brgy-head h2 { margin: 0 !important; font-size: 40px !important; }
-        /* Plotly chart container — let it inherit cleanly */
-        .js-plotly-plot { border-radius: 12px; }
-        /* Strong text inside HTML cards */
-        .kpi strong { color: #1A1F2E; font-weight: 700; }
+        .brgy-head h2 { margin: 0 !important; font-size: 24px !important; }
+        /* Plotly chart container */
+        .js-plotly-plot { border-radius: 10px; }
+        .kpi strong { color: #0F172A; font-weight: 600; }
         </style>
         """,
         unsafe_allow_html=True,
@@ -519,72 +539,37 @@ def render_overview(brgy_df):
 
 
 def render_classification_report(row, community_key):
-    """Per-barangay classification statement with sourced framework citation."""
+    """Per-barangay classification statement with compact layout."""
     label = COMMUNITY_LABELS.get(community_key, "—")
     color = COMMUNITY_COLORS.get(community_key, "#B45309")
     density = float(row.get("pocket_density_per_1k", 0))
     transition = float(row.get("transition_rate_pct", 0))
     graduated = float(row.get("graduated_share_pct", 0))
-    surveyed = int(row.get("families_surveyed", 0))
-    pop = int(row.get("pop_2024", 0))
 
     rank = int(row.get("community_rank", 0))
     total = int(row.get("community_rank_total", 14))
-    rank_text = f"rank <strong>#{rank}</strong> of {total}"
 
     if community_key == "priority":
-        why_html = (
-            f"<strong>Low-Income Barangay</strong> — among the highest "
-            f"concentration of low-income families in District V "
-            f"({rank_text}). <strong>{density:.1f}</strong> poor families "
-            f"per 1,000 residents, only <strong>{transition:.1f}%</strong> "
-            f"moving up — <em>top priority</em> for assistance."
-        )
+        priority_tag = "<span style='color:#B91C1C;font-weight:700;'>High Priority</span>"
+        summary_txt = f"Ranked <strong>#{rank}</strong> of {total} in District V — high concentration of low-income families needing assistance."
     elif community_key == "stable":
-        why_html = (
-            f"<strong>Higher-Income Barangay</strong> — among the lowest "
-            f"concentration of low-income families in District V "
-            f"({rank_text}). <strong>{density:.1f}</strong> poor families "
-            f"per 1,000 residents, <strong>{transition:.1f}%</strong> "
-            f"moving up — <em>low priority</em>, maintain existing 4Ps."
-        )
+        priority_tag = "<span style='color:#166534;font-weight:700;'>Low Priority</span>"
+        summary_txt = f"Ranked <strong>#{rank}</strong> of {total} in District V — lower concentration of low-income families."
     else:
-        why_html = (
-            f"<strong>Mixed-Income Barangay</strong> — middle of the "
-            f"District V ranking ({rank_text}). "
-            f"<strong>{density:.1f}</strong> poor families per 1,000 "
-            f"residents, <strong>{transition:.1f}%</strong> moving up — "
-            f"<em>moderate priority</em> for assistance."
-        )
-
-    source_html = (
-        "<strong>Method:</strong> the 14 barangays are ranked by a score "
-        "(poor families per 1,000 residents, weighted by how few move up). "
-        "Bottom-third = Level 3 (Higher-Income), middle = Level 2 "
-        "(Mixed-Income), top = Level 1 (Low-Income). "
-        f"QC's overall poverty rate is only "
-        f"<strong>{QC_BASELINE_POVERTY_PCT:.1f}%</strong> (PSA, 2023), "
-        "so peer ranking is used — same approach as PSA Small Area "
-        "Estimation for LGU prioritization."
-    )
+        priority_tag = "<span style='color:#B45309;font-weight:700;'>Moderate Priority</span>"
+        summary_txt = f"Ranked <strong>#{rank}</strong> of {total} in District V — mixed-income barangay in transition."
 
     st.markdown(
         f"<div class='kpi'>"
-        f"<div class='k'>Classification</div>"
-        f"<div style='margin-top:10px;'>"
-        f"<span style='display:inline-block;background:{color};color:#fff;"
-        f"padding:6px 14px;border-radius:999px;font-weight:700;"
-        f"font-size:19px;letter-spacing:0.3px;'>{label}</span>"
+        f"<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;'>"
+        f"<span style='background:{color};color:#fff;padding:4px 12px;border-radius:999px;font-weight:600;font-size:12px;'>{label}</span>"
+        f"{priority_tag}"
         f"</div>"
-        f"<div style='margin-top:12px;font-size:19px;line-height:1.6;"
-        f"color:#1A1F2E;'>{why_html}</div>"
-        f"<div style='margin-top:14px;padding:14px 16px;"
-        f"background:rgba(244,239,229,0.7);border-radius:8px;"
-        f"font-size:18px;line-height:1.65;color:#1A1F2E;'>{source_html}</div>"
-        f"<div style='margin-top:10px;font-size:19px;color:#6B7280;'>"
-        f"<strong>{density:.1f}</strong> per 1,000 &nbsp;·&nbsp; "
-        f"<strong>{transition:.1f}%</strong> moved up &nbsp;·&nbsp; "
-        f"<strong>{graduated:.1f}%</strong> graduated"
+        f"<div style='font-size:14px;color:#334155;line-height:1.45;'>{summary_txt}</div>"
+        f"<div style='margin-top:10px;padding-top:8px;border-top:1px solid #F1F5F9;display:flex;gap:14px;font-size:12px;color:#64748B;flex-wrap:wrap;'>"
+        f"<span><strong>{density:.1f}</strong> 4Ps/1k pop</span>"
+        f"<span><strong>{transition:.1f}%</strong> tier upward</span>"
+        f"<span><strong>{graduated:.1f}%</strong> graduated</span>"
         f"</div></div>",
         unsafe_allow_html=True,
     )
@@ -745,21 +730,20 @@ def render_shap_panel(brgy_name, predicted_class, shap_df, top_n=6):
         share = (v / total) * 100
         bar_pct = (v / vmax) * 100
         bars.append(
-            f"<div style='margin:10px 0;'>"
-            f"<div style='display:flex;justify-content:space-between;font-size:18px;'>"
-            f"<span style='color:#1A1F2E;font-weight:600;'>{lbl}</span>"
+            f"<div style='margin:8px 0;'>"
+            f"<div style='display:flex;justify-content:space-between;font-size:13px;'>"
+            f"<span style='color:#0F172A;font-weight:600;'>{lbl}</span>"
             f"<span class='muted'>{share:.0f}%</span></div>"
-            f"<div style='background:#F4EFE5;border-radius:6px;height:10px;overflow:hidden;margin-top:5px;'>"
-            f"<div style='background:#2A4365;width:{bar_pct:.1f}%;height:100%;'></div>"
+            f"<div style='background:#E2E8F0;border-radius:4px;height:6px;overflow:hidden;margin-top:4px;'>"
+            f"<div style='background:#1E293B;width:{bar_pct:.1f}%;height:100%;'></div>"
             f"</div></div>"
         )
     st.markdown(
-        f"<div class='kpi'><div class='k'>Why the prediction</div>"
-        f"<div class='muted' style='margin-top:6px;'>"
-        f"Top factors behind <strong>{predicted_class}</strong> in "
-        f"<strong>{brgy_name}</strong>."
+        f"<div class='kpi'><div class='k'>Top Model Drivers</div>"
+        f"<div class='muted' style='margin-top:4px;'>"
+        f"Primary indicators driving prediction for <strong>{brgy_name}</strong>."
         f"</div>"
-        f"<div style='margin-top:14px;'>{''.join(bars)}</div></div>",
+        f"<div style='margin-top:10px;'>{''.join(bars)}</div></div>",
         unsafe_allow_html=True,
     )
 
@@ -984,33 +968,29 @@ def render_policy_brief(brgy_name, briefs):
     if not brief or "error" in brief:
         st.markdown(
             "<div class='kpi'><div class='k'>AI Policy Brief</div>"
-            "<div class='muted' style='margin-top:6px;line-height:1.5;'>"
-            "No brief generated yet. Run <code>python build_briefs.py</code> "
-            "(needs a free Gemini API key from "
-            "<a href='https://aistudio.google.com/apikey' target='_blank'>aistudio.google.com/apikey</a>) "
-            "to generate AI-recommended programs for each barangay."
+            "<div class='muted' style='margin-top:4px;'>"
+            "No brief generated yet. Run <code>python build_briefs.py</code> to generate AI-recommended policy briefs."
             "</div></div>",
             unsafe_allow_html=True,
         )
         return
 
-    PRIORITY_COLOR = {"High": "#B91C1C", "Medium": "#B45309", "Low": "#6B7280"}
+    PRIORITY_COLOR = {"High": "#EF4444", "Medium": "#F59E0B", "Low": "#64748B"}
 
     program_cards = []
     for p in brief.get("programs", []):
         prio = p.get("priority", "Medium")
-        pc = PRIORITY_COLOR.get(prio, "#6B7280")
+        pc = PRIORITY_COLOR.get(prio, "#64748B")
         program_cards.append(
-            f"<div style='border-left:4px solid {pc};padding:12px 16px;margin:10px 0;"
-            f"background:rgba(255,255,255,0.85);border-radius:10px;"
-            f"box-shadow:0 2px 8px -6px rgba(15,23,42,0.10);'>"
-            f"<div style='display:flex;justify-content:space-between;align-items:baseline;'>"
-            f"<span style='font-weight:700;font-size:19px;color:#1A1F2E;'>{p.get('name','')}</span>"
-            f"<span style='font-size:15px;text-transform:uppercase;letter-spacing:0.5px;"
+            f"<div style='border-left:3px solid {pc};padding:10px 14px;margin:8px 0;"
+            f"background:#FFFFFF;border-radius:8px;border:1px solid #E2E8F0;border-left-width:3px;'>"
+            f"<div style='display:flex;justify-content:space-between;align-items:center;'>"
+            f"<span style='font-weight:600;font-size:14px;color:#0F172A;'>{p.get('name','')}</span>"
+            f"<span style='font-size:11px;text-transform:uppercase;letter-spacing:0.5px;"
             f"font-weight:700;color:{pc};'>{prio}</span></div>"
-            f"<div style='font-size:19px;color:#6B7280;margin-top:4px;'>"
+            f"<div style='font-size:12px;color:#64748B;margin-top:2px;'>"
             f"{p.get('agency','')}</div>"
-            f"<div style='font-size:18px;color:#3A4256;margin-top:8px;line-height:1.6;'>"
+            f"<div style='font-size:13px;color:#334155;margin-top:6px;line-height:1.45;'>"
             f"{p.get('rationale','')}</div></div>"
         )
 
@@ -1018,25 +998,25 @@ def render_policy_brief(brgy_name, briefs):
     sug_html = ""
     if suggestion:
         sug_html = (
-            f"<div style='margin-top:14px;padding:12px 14px;background:rgba(244,239,229,0.7);"
-            f"border-radius:8px;font-size:17px;'>"
-            f"<div style='font-weight:700;color:#1A1F2E;margin-bottom:6px;font-size:19px;"
-            f"text-transform:uppercase;letter-spacing:0.5px;color:#6B7280;'>"
+            f"<div style='margin-top:10px;padding:10px 12px;background:#F8FAFC;border:1px solid #E2E8F0;"
+            f"border-radius:8px;font-size:13px;'>"
+            f"<div style='font-weight:700;color:#64748B;margin-bottom:4px;font-size:11px;"
+            f"text-transform:uppercase;letter-spacing:0.5px;'>"
             f"Suggested intensities</div>"
-            f"<div style='color:#1A1F2E;font-size:18px;'>"
+            f"<div style='color:#0F172A;font-size:13px;'>"
             f"<strong>Financial</strong> {suggestion.get('financial','-')}% &nbsp;·&nbsp; "
             f"<strong>Education</strong> {suggestion.get('education','-')}% &nbsp;·&nbsp; "
             f"<strong>Livelihood</strong> {suggestion.get('livelihood','-')}%"
             f"</div>"
-            f"<div class='muted' style='margin-top:6px;'>"
+            f"<div class='muted' style='margin-top:4px;font-size:12px;'>"
             f"{suggestion.get('reasoning','')}</div></div>"
         )
 
     st.markdown(
         f"<div class='kpi'>"
-        f"<div style='font-size:19px;color:#1A1F2E;line-height:1.6;'>"
+        f"<div style='font-size:14px;color:#0F172A;line-height:1.5;font-weight:500;'>"
         f"{brief.get('summary','')}</div>"
-        f"<div style='margin-top:10px;'>{''.join(program_cards)}</div>"
+        f"<div style='margin-top:8px;'>{''.join(program_cards)}</div>"
         f"{sug_html}"
         f"</div>",
         unsafe_allow_html=True,
@@ -1633,36 +1613,26 @@ with st.sidebar:
     )
     st.markdown("<hr class='rule'>", unsafe_allow_html=True)
     st.markdown(
-        "<div style='font-weight:700;font-size:17px;color:#1A1F2E;"
-        "text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;'>"
-        "Income Levels</div>",
+        "<div style='font-weight:700;font-size:12px;color:#64748B;"
+        "text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;'>"
+        "Income Tiers</div>",
         unsafe_allow_html=True,
     )
     _community_rules = {
-        "priority":   "top-third — highest concentration of low-income families",
-        "developing": "middle-third — mixed-income, in transition",
-        "stable":     "bottom-third — lowest concentration of low-income families",
+        "priority":   "Top-third priority for assistance",
+        "developing": "Middle-third mixed-income",
+        "stable":     "Bottom-third higher-income",
     }
     for key in COMMUNITY_CLASS_ORDER:
         st.markdown(
-            f"<div style='margin:8px 0;'>"
+            f"<div style='margin:6px 0;'>"
             f"<span class='tier-chip' style='background:{COMMUNITY_COLORS[key]};'>"
             f"{COMMUNITY_SHORT[key]}</span><br>"
-            f"<span class='muted' style='font-size:19px;'>"
+            f"<span class='muted' style='font-size:12px;margin-top:2px;display:inline-block;'>"
             f"{_community_rules[key]}</span>"
             f"</div>",
             unsafe_allow_html=True,
         )
-    st.markdown(
-        "<div class='muted' style='margin-top:12px;'>"
-        "The 14 barangays are ranked by poor families per 1,000 residents "
-        "(weighted by how few move up), then split into thirds. QC's "
-        "overall poverty is just "
-        f"<strong>{QC_BASELINE_POVERTY_PCT:.1f}%</strong> (PSA, 2023), "
-        "so peer ranking is used — same as PSA Small Area Estimation."
-        "</div>",
-        unsafe_allow_html=True,
-    )
 
 if "selected_brgy" not in st.session_state:
     st.session_state.selected_brgy = None
@@ -1698,20 +1668,26 @@ with right:
             f"</div>",
             unsafe_allow_html=True,
         )
-        st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
-        render_classification_report(row, community_key)
-        st.markdown("<div style='height:14px;'></div>", unsafe_allow_html=True)
-        render_indicators(row)
-        st.markdown("<div style='height:14px;'></div>", unsafe_allow_html=True)
-        render_shap_panel(selected, cls, shap_df)
-        st.markdown("<div style='height:14px;'></div>", unsafe_allow_html=True)
-        render_class_distribution(row)
-
-if selected:
-    st.markdown("<hr class='rule'>", unsafe_allow_html=True)
-    st.markdown(f"### Intervention Plan · {selected}")
-    render_intervention_plan(
-        selected, families_df, model_pipe, model_features,
-        conformal=conformal, briefs=briefs,
-    )
+        st.markdown("<div style='height:4px;'></div>", unsafe_allow_html=True)
+        tab1, tab2, tab3 = st.tabs([
+            "📊 Overview & Indicators",
+            "🔍 AI Drivers & Briefs",
+            "🎯 Intervention Planner"
+        ])
+        with tab1:
+            render_classification_report(row, community_key)
+            st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
+            render_indicators(row)
+            st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
+            render_class_distribution(row)
+        with tab2:
+            render_shap_panel(selected, cls, shap_df)
+            st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
+            st.markdown("#### AI Government Assistance Brief")
+            render_policy_brief(selected, briefs)
+        with tab3:
+            render_intervention_plan(
+                selected, families_df, model_pipe, model_features,
+                conformal=conformal, briefs=briefs,
+            )
 
