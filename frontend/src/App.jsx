@@ -9,6 +9,7 @@ import SimulationView from './components/SimulationView';
 import PolicyBriefsView from './components/PolicyBriefsView';
 import SimulationModal from './components/SimulationModal';
 import PolicyBriefModal from './components/PolicyBriefModal';
+import IndividualClassifier from './components/IndividualClassifier';
 import { fetchOverview, fetchBarangays, fetchBarangayDetails } from './services/api';
 
 export default function App() {
@@ -74,7 +75,6 @@ export default function App() {
           barangays={filteredBarangays}
           selectedBarangay={selectedBarangay}
           onSelectBarangay={handleSelectBarangay}
-          onOpenSimulation={() => setShowSimulation(true)}
         />
 
         {/* Dynamic Scrollable Body */}
@@ -87,19 +87,18 @@ export default function App() {
 
           {/* Tab 1: Overview with Clean Free Map + Directory + Profile */}
           {activeTab === 'dashboard' && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[580px]">
-              {/* Left 4 Cols: Barangay Directory */}
-              <div className="lg:col-span-4 h-full">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+              {/* Card 1: Barangay Roster — fixed height, scrollable */}
+              <div className="h-[420px]">
                 <BarangayDirectory
                   barangays={filteredBarangays}
                   selectedBarangay={selectedBarangay}
                   onSelectBarangay={handleSelectBarangay}
-                  onOpenSimulation={() => setShowSimulation(true)}
                 />
               </div>
 
-              {/* Center 4 Cols: Clean Free Map (No Geofence) */}
-              <div className="lg:col-span-4 h-full">
+              {/* Card 2: Overview Map — matches roster height */}
+              <div className="h-[420px]">
                 <OverviewMap
                   barangays={filteredBarangays}
                   selectedBarangay={selectedBarangay}
@@ -107,8 +106,8 @@ export default function App() {
                 />
               </div>
 
-              {/* Right 4 Cols: Selected Barangay Details & Progress Bars */}
-              <div className="lg:col-span-4 h-full">
+              {/* Card 3: Barangay Profile — auto height, content fills naturally */}
+              <div className="h-[420px]">
                 <BarangayProfile
                   barangay={selectedBarangay}
                   onOpenSimulation={() => setShowSimulation(true)}
@@ -135,6 +134,11 @@ export default function App() {
               onSelectBarangay={handleSelectBarangay}
               onOpenSimulation={() => setActiveTab('simulation')}
             />
+          )}
+
+          {/* Tab 4: Individual Family Classifier */}
+          {activeTab === 'classifier' && (
+            <IndividualClassifier />
           )}
         </main>
       </div>

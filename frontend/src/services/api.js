@@ -43,3 +43,16 @@ export async function fetchGeoJSON() {
   if (!res.ok) throw new Error('Failed to load geojson polygons');
   return res.json();
 }
+
+export async function generateLivePolicyBrief(barangayName) {
+  const res = await fetch(`${API_BASE}/policy-brief/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ barangay: barangayName }),
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.detail || 'Failed to generate live policy brief');
+  }
+  return res.json();
+}

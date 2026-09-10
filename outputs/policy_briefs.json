@@ -35,38 +35,38 @@
     }
   },
   "Capri": {
-    "summary": "Barangay Capri, despite its 'High' income tier prediction, faces the challenge of ensuring sustainable economic independence for a significant portion of its families, particularly those transitioning from or still active in conditional cash transfer programs.",
+    "summary": "Barangay Capri, despite a predicted high-income tier and an average per-capita income above the poverty line, faces a significant challenge with 34.0% of families in 'Low-Income (Survival).' The primary bottleneck is the need to strengthen sustainable pathways out of poverty, particularly for 4Ps beneficiaries, and mitigate the economic strain of large family sizes, which are key drivers of vulnerability.",
     "programs": [
       {
         "name": "Sustainable Livelihood Program (SLP)",
         "agency": "DSWD",
+        "sector": "Livelihood",
         "priority": "High",
-        "rationale": "This program is crucial given that 84% of previously identified 4Ps households are still active, and 'Graduated from 4Ps' accounts for 28% of the impact on the barangay's income tier prediction, necessitating support for sustainable income generation."
+        "rationale": "This program directly addresses the need to move the 34.0% (82 families) in 'Low-Income (Survival)' and 24.1% (58 families) in 'Middle-Income (Subsistence)' towards self-sufficiency. Strengthening livelihood opportunities for the 84.2% of active 4Ps households is crucial, especially since 'Graduated from 4Ps' is the top ML decision driver at 28.2%, indicating its impact on income mobility."
       },
       {
-        "name": "Livelihood Seeding Program - Negosyo Serbisyo sa Barangay (LSP-NSB)",
-        "agency": "DTI",
-        "priority": "Medium",
-        "rationale": "Supporting the barangay's 'High' income tier, this program can further empower families to establish or expand small businesses, particularly for those with an average family size of 5.7, enhancing overall economic self-sufficiency."
+        "name": "Responsible Parenthood and Family Planning Program",
+        "agency": "POPCOM / Quezon City Social Welfare and Development Department (CSWDD)",
+        "sector": "Family Welfare",
+        "priority": "High",
+        "rationale": "With an average family size of 5.7 and 2.7 children at home, which are significant ML decision drivers at 27.3% and 15.8% respectively, this program helps families manage their size. By promoting responsible parenthood, it can alleviate the economic strain on the average monthly per-capita income of PHP 3,673, improving resource allocation per individual."
       },
       {
-        "name": "Alternative Learning System (ALS)",
-        "agency": "DepEd",
+        "name": "Alternative Learning System (ALS) & QC-LGU Academic Scholarships",
+        "agency": "Department of Education (DepEd) / Quezon City Local Government Unit (LGU)",
+        "sector": "Education",
         "priority": "Medium",
-        "rationale": "While 2.3 out of 2.7 children are currently in school, ALS can provide educational opportunities for out-of-school youth and adults, potentially from larger families, improving their skills and employability for better livelihood prospects."
-      },
-      {
-        "name": "Responsible Parenthood and Family Planning (RPFP) Program",
-        "agency": "POPCOM / LGU",
-        "priority": "Medium",
-        "rationale": "Given the average family size of 5.7 and an average of 2.7 children at home, this program can empower families to make informed decisions about family planning, contributing to improved resource management and overall well-being."
+        "rationale": "While 2.3 children are in school, there's an average gap of 0.4 children not attending, indicating a need for targeted educational support. ALS can empower adults and out-of-school youth from the 34.0% low-income families, while scholarships can ensure the 2.7 children at home complete their education, fostering long-term human capital development and self-sufficiency."
       }
     ],
     "slider_suggestion": {
-      "financial": 20,
+      "financial": 25,
       "education": 30,
-      "livelihood": 50,
-      "reasoning": "Livelihood support is paramount to ensure sustainable economic independence for families transitioning out of poverty and to maintain the barangay's 'High' income tier status."
+      "livelihood": 45,
+      "financial_targets": "DSWD 4Ps & Emergency AICS",
+      "education_targets": "DepEd ALS & QC Academic Scholarships",
+      "livelihood_targets": "DSWD SLP & DOLE TUPAD Micro-Grants",
+      "reasoning": "This allocation prioritizes sustainable economic empowerment through livelihood programs, given the high 4Ps transition rate and the ML model's prediction of self-sufficiency. Education is crucial for long-term mobility, while financial aid provides essential safety nets for the most vulnerable during their transition."
     }
   },
   "Fairview": {
@@ -105,73 +105,73 @@
     }
   },
   "Greater Lagro": {
-    "summary": "This barangay faces extreme poverty, characterized by very low per-capita income, large family sizes, and a high number of children, necessitating interventions that boost income and support education.",
+    "summary": "Barangay Greater Lagro faces significant hidden poverty, with 35% of families in the \"Survival\" income tier despite its LGU \"Higher-Income\" classification and a concerning 0% 4Ps graduation rate. The primary focus must be on enhancing human capital development and sustainable livelihood opportunities, particularly for large families with many children.",
     "programs": [
       {
-        "name": "Sustainable Livelihood Program (SLP)",
+        "name": "Pantawid Pamilyang Pilipino Program (4Ps) Review and Enhancement",
         "agency": "DSWD",
         "priority": "High",
-        "rationale": "With an average monthly per-capita income of only PHP 3,440, this program is crucial to provide livelihood opportunities and increase household income for families in SWDI Level 1."
+        "rationale": "Despite 90% of enrolled households being active in 4Ps, the 0% graduation rate and 35% transition rate indicate a failure to move families out of poverty. Given that 'Households active in 4Ps (%)' is a top ML driver (22.5%) and 35% of families are in the 'Survival' tier, a comprehensive review is needed to identify barriers to graduation and potentially expand coverage from the current 0.8 per 1,000 residents."
       },
       {
-        "name": "Alternative Learning System (ALS)",
-        "agency": "DepEd",
+        "name": "Training for Work Scholarship Program (TWSP) / Community-Based Training",
+        "agency": "TESDA",
         "priority": "High",
-        "rationale": "Given an average of 3.0 children at home but only 2.2 children currently in school, ALS can address the educational needs of the estimated 0.8 out-of-school children per family, improving their future prospects."
+        "rationale": "With an average family size of 6.2 and 3.0 children at home (a top ML driver at 24.5%), empowering adult family members with employable skills is crucial. This directly addresses the 35% of families in the 'Low-Income (Survival)' tier and aims to increase the average monthly per-capita income of PHP 3,440 through sustainable employment."
       },
       {
-        "name": "Family Planning and Responsible Parenthood Program",
-        "agency": "POPCOM",
+        "name": "Alternative Learning System (ALS) and QC-LGU Education Assistance",
+        "agency": "DepEd / QC-LGU",
         "priority": "Medium",
-        "rationale": "The average family size of 6.2 and 3.0 children at home are significant drivers of poverty, and this program can empower families to make informed decisions about family size and spacing."
+        "rationale": "'Children attending school' is a significant ML driver (16.7%), and with an average of 3.0 children at home but only 2.2 in school, there's a potential gap of 0.8 children needing educational support. ALS can cater to out-of-school youth and adults, improving human capital and future earning potential for the 35% low-income families."
       },
       {
-        "name": "Assistance to Individuals in Crisis Situation (AICS)",
-        "agency": "DSWD",
-        "priority": "Medium",
-        "rationale": "As an SWDI Level 1 barangay with an average monthly per-capita income of PHP 3,440, AICS provides immediate financial and material aid to families facing urgent needs and emergencies."
+        "name": "Livelihood and Emergency Employment Program (LEEP)",
+        "agency": "DOLE",
+        "priority": "High",
+        "rationale": "To complement skills training and directly address the 35% of families in the 'Survival' income tier, direct livelihood support is essential. LEEP can provide seed capital or tools for micro-enterprises, fostering sustainable income generation and helping families move beyond the PHP 3,440 average per-capita income."
       }
     ],
     "slider_suggestion": {
-      "financial": 90,
-      "education": 70,
-      "livelihood": 85,
-      "reasoning": "Financial and livelihood support are paramount to address the extremely low average monthly per-capita income of PHP 3,440, while education interventions are needed for the potential 0.8 out-of-school children per family."
+      "financial": 25,
+      "education": 30,
+      "livelihood": 45,
+      "reasoning": "This resource mix prioritizes sustainable livelihood and human capital development to address the 0% 4Ps graduation rate and move families out of the 'Survival' income tier, while maintaining essential financial support for immediate needs."
     }
   },
   "Gulod": {
-    "summary": "While generally self-sufficient, Barangay Gulod faces the challenge of sustaining economic stability for vulnerable households, particularly those transitioning from conditional cash transfers and larger families, as indicated by the significant number of active 4Ps recipients.",
+    "summary": "Barangay Gulod, despite its predicted trajectory towards high self-sufficiency, still has 44.4% of families in low to middle-income tiers. The primary socio-economic bottleneck for sustained progress lies in managing family size and ensuring continuous educational attainment, which are critical drivers for economic mobility. Prioritizing targeted livelihood support, family welfare programs, and educational scholarships will empower these families to achieve the predicted self-sufficient status.",
     "programs": [
       {
-        "name": "Sustainable Livelihood Program (SLP)",
+        "name": "DSWD Sustainable Livelihood Program (SLP)",
         "agency": "DSWD",
+        "sector": "Livelihood",
         "priority": "High",
-        "rationale": "The 'Graduated from 4Ps' driver has a 28% impact, indicating a critical need to support families transitioning out of 4Ps to ensure sustained self-sufficiency. This program can assist the 313 4Ps recipient families (86% active) in developing sustainable livelihoods."
+        "rationale": "With 44.4% of families in low or middle-income tiers and a 55.7% 4Ps transition rate, SLP is crucial to provide sustainable income opportunities. It directly supports the 8.9% of families who have graduated from 4Ps, helping them maintain self-sufficiency and preventing relapse into poverty."
       },
       {
-        "name": "Pantawid Pamilyang Pilipino Program (4Ps)",
-        "agency": "DSWD",
+        "name": "Responsible Parenthood and Family Planning Program",
+        "agency": "POPCOM / CSWDO",
+        "sector": "Family Welfare",
         "priority": "High",
-        "rationale": "Despite the high-income tier prediction, 313 families are still active 4Ps recipients (86%), demonstrating a continued need for conditional cash transfers to support children's health and education, especially with 'Children at home (0-18)' as a 17% impact driver."
+        "rationale": "\"Family size\" (29.0%) and \"Children at home (under 18)\" (17.3%) are the top two ML decision drivers for vulnerability. Promoting responsible parenthood can help families manage their size, which currently averages 5.0 members with 2.5 children, thereby easing financial strain on the 13.7% low-income families."
       },
       {
-        "name": "Alternative Learning System (ALS)",
-        "agency": "DepEd",
-        "priority": "Medium",
-        "rationale": "With an average of 2.5 children at home (0-18) but only 2.0 children currently in school, there's a potential gap in school attendance. ALS can cater to out-of-school youth and adults, improving the 'School attendance rate' (11% impact) and overall educational attainment."
-      },
-      {
-        "name": "DOLE Integrated Livelihood Program (DILP)",
-        "agency": "DOLE",
-        "priority": "Medium",
-        "rationale": "'Family size' is the top driver (29% impact), suggesting larger families need enhanced income opportunities. DILP provides skills training and starter kits for livelihood projects, empowering families to generate more income and improve their economic resilience."
+        "name": "QC-LGU Academic Scholarships / DepEd Senior High School Voucher Program",
+        "agency": "QC-LGU / DepEd",
+        "sector": "Education",
+        "priority": "High",
+        "rationale": "\"Children attending school\" (14.6%) and \"School attendance rate\" (10.9%) are significant ML drivers. With an average of 2.0 children in school per family, these scholarships ensure continued access to education, particularly for the 13.7% low-income families, fostering human capital development and breaking intergenerational poverty cycles."
       }
     ],
     "slider_suggestion": {
-      "financial": 80,
-      "education": 60,
-      "livelihood": 90,
-      "reasoning": "The primary focus should be on livelihood and financial stability to ensure sustained self-sufficiency, especially for families transitioning from conditional cash transfers and those with larger family sizes."
+      "financial": 25,
+      "education": 30,
+      "livelihood": 45,
+      "financial_targets": "DSWD 4Ps & Emergency AICS",
+      "education_targets": "DepEd ALS & QC Academic Scholarships",
+      "livelihood_targets": "DSWD SLP & DOLE TUPAD Micro-Grants",
+      "reasoning": "The barangay's predicted high-income tier and lower poverty rank (#11 out of 14) suggest a shift from pure financial aid to sustainable development. High investment in livelihood and education directly addresses the top ML drivers related to family economic capacity and human capital, while moderate financial support targets the remaining 13.7% low-income families."
     }
   },
   "Kaligayahan": {
@@ -455,38 +455,38 @@
     }
   },
   "Santa Monica": {
-    "summary": "Barangay Santa Monica faces significant challenges with extreme poverty and a high dependency ratio, indicated by its low-income tier and large average family size, necessitating targeted social protection and livelihood interventions.",
+    "summary": "Barangay Santa Monica faces a critical challenge with 85.3% of its families in the 'Low-Income (Survival)' tier, primarily driven by low 4Ps graduation rates and large family sizes. The priority focus must be on sustainable livelihood generation, complemented by education and family welfare programs, to enable families to transition out of poverty.",
     "programs": [
-      {
-        "name": "Pantawid Pamilyang Pilipino Program (4Ps)",
-        "agency": "DSWD",
-        "priority": "High",
-        "rationale": "Despite 82% of households being active in 4Ps, the barangay's predicted low-income tier (SWDI Level 1) and average family size of 5.2 suggest continued need for conditional cash transfers to support the 2.2 children at home."
-      },
       {
         "name": "Sustainable Livelihood Program (SLP)",
         "agency": "DSWD",
         "priority": "High",
-        "rationale": "Given the low average monthly per-capita income of PHP 2,922 and the significant impact of 'Graduated from 4Ps' (25%) and 'Family size' (22%) on the prediction, SLP can provide crucial seed capital or grants for micro-enterprises to boost household income."
+        "rationale": "Given that 85.3% of families are in the 'Low-Income (Survival)' tier and only 7.8% of 4Ps households have graduated, the SLP is crucial to provide sustainable livelihood opportunities and facilitate their transition out of poverty. This directly addresses the low 4Ps graduation rate, which is a 24.8% driver of income prediction."
+      },
+      {
+        "name": "Training for Work Scholarship Program (TWSP) / Community-Based Training (CBT)",
+        "agency": "TESDA",
+        "priority": "High",
+        "rationale": "With 85.3% of families in the survival income tier and 'school attendance rate' being a 13.9% decision driver, TESDA's programs can provide vocational skills to adults and out-of-school youth. This empowers families, especially those with an average of 2.2 children at home, to secure better employment and improve their economic standing."
+      },
+      {
+        "name": "Responsible Parenthood and Family Planning (RPFP)",
+        "agency": "POPCOM",
+        "priority": "Medium",
+        "rationale": "The average family size of 5.2 and 2.2 children at home are significant ML decision drivers (22.1% and 15.7% respectively) for low income. Promoting responsible parenthood and family planning can help families manage resources better, improve child welfare, and break the intergenerational cycle of poverty."
       },
       {
         "name": "Alternative Learning System (ALS)",
         "agency": "DepEd",
         "priority": "Medium",
-        "rationale": "With an average of 1.8 children currently in school out of 2.2 children at home, ALS can offer opportunities for out-of-school youth and adults to complete basic education, improving future employability and breaking the intergenerational cycle of poverty."
-      },
-      {
-        "name": "Assistance to Individuals in Crisis Situation (AICS)",
-        "agency": "DSWD",
-        "priority": "Medium",
-        "rationale": "The barangay's predicted extreme poverty and potential vulnerability due to recent population growth (24% impact) warrant continued provision of AICS for immediate relief and support during emergencies or unforeseen crises."
+        "rationale": "With 'school attendance rate' being a 13.9% decision driver and an average of 2.2 children at home, ALS provides a second chance for out-of-school youth and adults. This program is vital for the 85.3% low-income families to acquire basic education and improve their employability, thereby contributing to long-term poverty reduction."
       }
     ],
     "slider_suggestion": {
-      "financial": 70,
-      "education": 50,
-      "livelihood": 80,
-      "reasoning": "Livelihood and financial assistance are most critical given the barangay's extreme poverty classification and low per-capita income."
+      "financial": 20,
+      "education": 30,
+      "livelihood": 50,
+      "reasoning": "The overwhelming majority (85.3%) of families in the 'Survival' income tier necessitates a strong focus on sustainable livelihood programs. Education is crucial for long-term human capital development, while financial aid complements existing 4Ps support."
     }
   }
 }
