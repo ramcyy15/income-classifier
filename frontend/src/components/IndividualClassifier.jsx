@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import {
   User, Sliders, Sparkles, RotateCcw,
-  TrendingUp, AlertCircle, CheckCircle2, Info, MapPin
+  TrendingUp, AlertCircle, CheckCircle2, Info, MapPin,
+  Wallet, Users, Scale, GraduationCap, BarChart3
 } from "lucide-react";
 import kalingaLogo from "../assets/KalingaBot AI.png";
 import {
@@ -21,33 +22,32 @@ const DISTRICT_V_BARANGAYS = [
   "Santa Lucia", "Santa Monica"
 ];
 
-const HOUSEHOLD_OPTIONS = ["Active", "Graduated", "Conditionally Compliant", "None"];
+const FEATURE_ICONS = {
+  "Per-Capita Income": Wallet,
+  "Total Monthly Income": TrendingUp,
+  "Income per Dependent": Scale,
+  "Family Size": Users,
+  "Minor Dependents": User,
+  "Children in School": GraduationCap,
+  "School Attendance Rate": GraduationCap,
+  "Dependency Burden": AlertCircle,
+  "Out-of-School Children": AlertCircle,
+};
 
 const FIELDS = [
-  { id: "monthly_per_capita_income", label: "Monthly Per-Capita Income (PHP)", type: "number", min: 0,  max: 50000, step: 100, placeholder: "e.g. 3500", icon: "PhP", tip: "Total household monthly income divided by family size (from SWDI)." },
-  { id: "family_size",               label: "Family Size",                     type: "number", min: 1,  max: 20,    step: 1,   placeholder: "e.g. 5",    icon: "Fam", tip: "Total number of family members in the household." },
-  { id: "dependents_0_18",           label: "Dependents below 18 yrs old",     type: "number", min: 0,  max: 15,    step: 1,   placeholder: "e.g. 3",    icon: "Dep", tip: "Number of children aged 0 to 18 living at home." },
-  { id: "children_in_school",        label: "Children Attending School",        type: "number", min: 0,  max: 15,    step: 1,   placeholder: "e.g. 2",    icon: "Sch", tip: "Number of school-age children currently enrolled." },
+  { id: "total_monthly_income", label: "Total Monthly Household Income (PHP)", type: "number", min: 0,  max: 500000, step: 500, placeholder: "e.g. 15,000", icon: "PhP", tip: "Total combined income of ALL earners in the household per month. (We will compute per-capita automatically.)" },
+  { id: "family_size",         label: "Family Size",                          type: "number", min: 1,  max: 20,     step: 1,   placeholder: "e.g. 5",      icon: "Fam", tip: "Total number of family members in the household." },
+  { id: "dependents_0_18",     label: "Dependents below 18 yrs old",          type: "number", min: 0,  max: 20,     step: 1,   placeholder: "e.g. 3",      icon: "Dep", tip: "Number of children aged 0 to 18 living at home." },
+  { id: "children_in_school",  label: "Children Attending School",             type: "number", min: 0,  max: 20,     step: 1,   placeholder: "e.g. 2",      icon: "Sch", tip: "Number of school-age children currently enrolled." },
 ];
 
 const DEFAULT_FORM = {
   barangay: "Bagbag",
-  monthly_per_capita_income: "",
+  total_monthly_income: "",
   family_size: "",
   dependents_0_18: "",
-  children_in_school: "",
-  household_status: "None"
+  children_in_school: ""
 };
-
-function ChartTip({ active, payload }) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="bg-white border border-slate-200 shadow-lg rounded-xl px-3 py-2 text-[11px]">
-      <p className="font-bold text-slate-800">{payload[0]?.payload?.feature}</p>
-      <p className="text-slate-500">Impact: <span className="font-bold text-indigo-600">{Number(payload[0]?.value).toFixed(1)}%</span></p>
-    </div>
-  );
-}
 
 export default function IndividualClassifier() {
   const [form, setForm]       = useState(DEFAULT_FORM);
@@ -63,16 +63,16 @@ export default function IndividualClassifier() {
     if (!isFormValid) return;
     setLoading(true); setError(null); setResult(null);
     try {
+      const familySize = Math.max(Number(form.family_size), 1);
       const res = await fetch("http://localhost:8000/api/classify-individual", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          barangay:                  form.barangay,
-          monthly_per_capita_income: Number(form.monthly_per_capita_income),
-          family_size:               Number(form.family_size),
-          dependents_0_18:           Number(form.dependents_0_18),
-          children_in_school:        Number(form.children_in_school),
-          household_status:          form.household_status,
+          barangay:             form.barangay,
+          total_monthly_income: Number(form.total_monthly_income),
+          family_size:          familySize,
+          dependents_0_18:      Number(form.dependents_0_18),
+          children_in_school:   Number(form.children_in_school),
         }),
       });
       if (!res.ok) throw new Error(await res.text());
@@ -161,22 +161,6 @@ export default function IndividualClassifier() {
                 </div>
               ))}
             </div>
-
-            <div className="mt-3.5">
-              <label className="block text-[11px] font-semibold text-slate-600 mb-1.5">4Ps Household Status</label>
-              <div className="flex gap-2 flex-wrap">
-                {HOUSEHOLD_OPTIONS.map((opt) => (
-                  <button key={opt} onClick={() => handleChange("household_status", opt)}
-                    className={`px-3 py-1.5 rounded-xl text-[10px] font-bold border transition-all cursor-pointer ${
-                      form.household_status === opt
-                        ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
-                        : "bg-slate-50 text-slate-500 border-slate-200 hover:border-indigo-300"
-                    }`}>
-                    {opt}
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
 
           <div className="pt-2">
@@ -243,29 +227,109 @@ export default function IndividualClassifier() {
                     );
                   })}
                 </div>
+
               </div>
 
               {/* Feature Drivers */}
               {result.feature_impacts?.length > 0 && (
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_2px_10px_rgba(0,0,0,0.03)] p-5">
-                  <p className="text-xs font-bold text-slate-800 mb-3">Key Decision Drivers</p>
-                  <ResponsiveContainer width="100%" height={170}>
-                    <BarChart data={result.feature_impacts} layout="vertical"
-                      margin={{ top: 0, right: 28, left: 10, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                      <XAxis type="number" tick={{ fontSize: 9, fill: "#94a3b8" }} axisLine={false} tickLine={false}
-                        tickFormatter={(v) => `${v.toFixed(0)}%`} />
-                      <YAxis type="category" dataKey="feature" tick={{ fontSize: 10, fill: "#475569", fontWeight: 600 }}
-                        axisLine={false} tickLine={false} width={145} />
-                      <Tooltip content={<ChartTip />} />
-                      <Bar dataKey="impact" radius={[0, 6, 6, 0]}>
-                        {result.feature_impacts.map((d, i) => (
-                          <Cell key={i} fill={d.impact >= 0 ? "#6366f1" : "#EF4444"} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                  <p className="text-[9px] text-slate-400 text-center mt-1">Relative feature sensitivity from stacking ensemble model.</p>
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_2px_10px_rgba(0,0,0,0.03)] p-5 space-y-3.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center">
+                        <BarChart3 className="w-3.5 h-3.5 text-indigo-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-800">Key Decision Drivers</p>
+                        <p className="text-[10px] text-slate-400 font-medium">Tree importance blended with District V baseline deviations</p>
+                      </div>
+                    </div>
+                    <span className="text-[9px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100 uppercase tracking-wider">
+                      Ensemble ML
+                    </span>
+                  </div>
+
+                  <div className="space-y-2.5 pt-1">
+                    {result.feature_impacts.map((d, i) => {
+                      const IconComp = FEATURE_ICONS[d.feature] || BarChart3;
+                      const isTop = i === 0;
+                      return (
+                        <div key={d.feature} className={`p-2.5 rounded-xl border transition-all ${
+                          isTop
+                            ? "bg-indigo-50/40 border-indigo-100 shadow-xs"
+                            : "bg-slate-50/70 border-slate-100 hover:border-slate-200"
+                        }`}>
+                          <div className="flex items-center justify-between gap-2 mb-1.5">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${
+                                isTop ? "bg-indigo-600 text-white shadow-xs" : "bg-white text-slate-500 border border-slate-200"
+                              }`}>
+                                #{i + 1}
+                              </span>
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <IconComp className={`w-3.5 h-3.5 flex-shrink-0 ${isTop ? "text-indigo-600" : "text-slate-400"}`} />
+                                <span className={`text-[11px] font-bold truncate ${isTop ? "text-indigo-950" : "text-slate-700"}`}>
+                                  {d.feature}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              {d.user_value && (
+                                <span className="text-[10px] font-semibold text-slate-500 bg-white/90 border border-slate-200/80 px-2 py-0.5 rounded-md">
+                                  {d.user_value}
+                                </span>
+                              )}
+                              <span className={`text-xs font-black min-w-[42px] text-right ${
+                                isTop ? "text-indigo-600" : "text-slate-700"
+                              }`}>
+                                {Number(d.impact).toFixed(1)}%
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Progress Track */}
+                          <div className="w-full bg-slate-200/70 rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-700 ${
+                                isTop
+                                  ? "bg-gradient-to-r from-indigo-600 to-indigo-400 shadow-xs"
+                                  : "bg-gradient-to-r from-indigo-400 to-slate-400"
+                              }`}
+                              style={{ width: `${Math.max(Number(d.impact), 3.5)}%` }}
+                            />
+                          </div>
+
+                          {d.desc && (
+                            <p className="text-[9.5px] text-slate-400 mt-1 pl-7 leading-tight font-medium">
+                              {d.desc}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Vulnerability Flags */}
+              {result.vulnerability_flags?.length > 0 && (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 space-y-2 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+                  <p className="text-[11px] font-bold text-amber-800 flex items-center gap-1.5">
+                    <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                    Vulnerability Warnings
+                  </p>
+                  {result.vulnerability_flags.map((v, i) => (
+                    <div key={i} className={`flex items-start gap-2 p-2.5 rounded-xl border text-[10px] ${
+                      v.severity === "critical"
+                        ? "bg-red-50 border-red-200 text-red-800"
+                        : "bg-amber-50 border-amber-200 text-amber-800"
+                    }`}>
+                      <AlertCircle className={`w-3.5 h-3.5 flex-shrink-0 mt-0.5 ${v.severity === "critical" ? "text-red-500" : "text-amber-500"}`} />
+                      <div>
+                        <span className="font-bold">{v.flag}: </span>
+                        <span className="font-medium opacity-90">{v.detail}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
 

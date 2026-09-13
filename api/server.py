@@ -753,11 +753,12 @@ Provide a concise 2-3 sentence implementation roadmap. Explain why this specific
     }
 
 class ClassifyIndividualRequest(BaseModel):
-    monthly_per_capita_income: float
+    monthly_per_capita_income: Optional[float] = None
+    total_monthly_income: Optional[float] = None
     family_size: float
     dependents_0_18: float
     children_in_school: float
-    household_status: str = "Active"
+    household_status: Optional[str] = "None"
     barangay: Optional[str] = "Batasan Hills"
 
 @app.post("/api/classify-individual")
@@ -769,28 +770,34 @@ def classify_individual(req: ClassifyIndividualRequest):
     pipeline = model_obj["pipeline"] if isinstance(model_obj, dict) else model_obj
     classes = model_obj.get("classes", ["Low", "Middle", "High"]) if isinstance(model_obj, dict) else ["Low", "Middle", "High"]
 
+    family_size = max(req.family_size, 1)
+    if req.total_monthly_income is not None:
+        total_income = req.total_monthly_income
+    elif req.monthly_per_capita_income is not None:
+        total_income = req.monthly_per_capita_income * family_size
+    else:
+        raise HTTPException(status_code=422, detail="Provide total_monthly_income.")
+
     # Ratio calculation
     ratio = (req.children_in_school / req.dependents_0_18) if req.dependents_0_18 > 0 else 1.0
     ratio = min(max(ratio, 0.0), 1.0)
 
-    # Input DataFrame tailored to individual family model
+    # Engineered features for individual family model (8 numerical features, no per-capita)
+    dep_ratio = min(req.dependents_0_18 / family_size, 1.0)
+    out_of_school = max(req.dependents_0_18 - req.children_in_school, 0.0)
+    income_per_dep = (total_income / req.dependents_0_18) if req.dependents_0_18 > 0 else total_income
+
+    # Input DataFrame tailored to individual family model (Total Monthly Income only)
     input_df = pd.DataFrame([{
-        "monthly_per_capita_income": req.monthly_per_capita_income,
-        "family_size": req.family_size,
+        "total_monthly_income": total_income,
+        "family_size": family_size,
         "dependents_0_18": req.dependents_0_18,
         "children_in_school": req.children_in_school,
         "children_in_school_ratio": ratio,
-        "household_status": req.household_status if req.household_status in ["Active", "Graduated", "Conditionally Compliant"] else "None",
+        "dep_ratio": dep_ratio,
+        "out_of_school_count": out_of_school,
+        "income_per_dependent": income_per_dep,
     }])
-
-    # Fallback columns if older pipeline is active
-    if "pop_2024" in getattr(pipeline.named_steps.get("prep"), "transformers_", [[]])[0][2]:
-        input_df["pop_2024"] = 65000.0
-        input_df["pop_growth_2000_2024"] = 15.0
-        input_df["pop_growth_2020_2024"] = 2.5
-        input_df["four_ps_per_1k_pop"] = 25.0
-        input_df["active_4ps_share"] = 80.0
-        input_df["barangay"] = req.barangay if req.barangay else "Bagbag"
 
     # Predict probabilities
     try:
@@ -803,43 +810,145 @@ def classify_individual(req: ClassifyIndividualRequest):
     confidence = float(probs[best_idx])
     prob_dict = {cls_name: float(probs[i]) for i, cls_name in enumerate(classes)}
 
-    # Compute marginal sensitivity directly on the dedicated model
-    base_defaults = {
-        "monthly_per_capita_income": 2800.0,
-        "family_size": 4.5,
-        "dependents_0_18": 2.2,
-        "children_in_school": 1.9,
-        "household_status": "Active",
+    # ── Hybrid Feature Impact: tree importances × contextual deviation ──
+    FEATURE_NAMES = [
+        ("Total Monthly Income", "total_monthly_income"),
+        ("Family Size", "family_size"),
+        ("Minor Dependents", "dependents_0_18"),
+        ("Children in School", "children_in_school"),
+        ("School Attendance Rate", "children_in_school_ratio"),
+        ("Dependency Burden", "dep_ratio"),
+        ("Out-of-School Children", "out_of_school_count"),
+        ("Income per Dependent", "income_per_dependent"),
+    ]
+
+    # District V dataset norms by predicted tier (pre-computed from 4,545 records)
+    TIER_NORMS = {
+        "Low":    {"total_monthly_income": 8972, "family_size": 5.8, "dependents_0_18": 3.2, "children_in_school": 2.5, "children_in_school_ratio": 0.81, "dep_ratio": 0.55, "out_of_school_count": 0.7, "income_per_dependent": 2800},
+        "Middle": {"total_monthly_income": 15276, "family_size": 5.7, "dependents_0_18": 2.7, "children_in_school": 2.1, "children_in_school_ratio": 0.83, "dep_ratio": 0.47, "out_of_school_count": 0.6, "income_per_dependent": 5600},
+        "High":   {"total_monthly_income": 27111, "family_size": 5.1, "dependents_0_18": 2.4, "children_in_school": 1.9, "children_in_school_ratio": 0.84, "dep_ratio": 0.47, "out_of_school_count": 0.5, "income_per_dependent": 11300},
+    }
+    TIER_STDS = {
+        "Low":    {"total_monthly_income": 4000, "family_size": 2.5, "dependents_0_18": 2.0, "children_in_school": 1.8, "children_in_school_ratio": 0.25, "dep_ratio": 0.25, "out_of_school_count": 1.2, "income_per_dependent": 2000},
+        "Middle": {"total_monthly_income": 5000, "family_size": 2.4, "dependents_0_18": 1.8, "children_in_school": 1.6, "children_in_school_ratio": 0.24, "dep_ratio": 0.24, "out_of_school_count": 1.1, "income_per_dependent": 3000},
+        "High":   {"total_monthly_income": 15000, "family_size": 2.3, "dependents_0_18": 1.7, "children_in_school": 1.5, "children_in_school_ratio": 0.23, "dep_ratio": 0.23, "out_of_school_count": 1.0, "income_per_dependent": 8000},
     }
 
-    feat_sensitivities = {}
-    factors = [
-        ("Monthly Income", "monthly_per_capita_income"),
-        ("Family Size", "family_size"),
-        ("Dependents (0-18)", "dependents_0_18"),
-        ("Children in School", "children_in_school"),
-        ("4Ps Household Status", "household_status"),
-    ]
+    # Extract real tree-based global importances from base learners
+    try:
+        stack = pipeline.named_steps["stack"]
+        rf_imp = stack.estimators_[0].feature_importances_
+        xgb_imp = stack.estimators_[1].feature_importances_
+        blended_imp = (rf_imp + xgb_imp) / 2.0
+        tree_weights = {
+            label: float(blended_imp[i]) for i, (label, _) in enumerate(FEATURE_NAMES) if i < len(blended_imp)
+        }
+    except Exception:
+        tree_weights = {
+            "Total Monthly Income": 0.45, "Income per Dependent": 0.20,
+            "Minor Dependents": 0.10, "Family Size": 0.09, "Out-of-School Children": 0.06,
+            "Children in School": 0.05, "Dependency Burden": 0.03, "School Attendance Rate": 0.02,
+        }
 
-    for label, col in factors:
-        alt_df = input_df.copy()
-        alt_df[col] = base_defaults[col]
-        if col in ["dependents_0_18", "children_in_school"]:
-            d_val = alt_df["dependents_0_18"].values[0]
-            s_val = alt_df["children_in_school"].values[0]
-            alt_df["children_in_school_ratio"] = min(max((s_val / d_val) if d_val > 0 else 1.0, 0.0), 1.0)
-        try:
-            alt_prob = pipeline.predict_proba(alt_df)[0][best_idx]
-            feat_sensitivities[label] = max(abs(confidence - alt_prob), 0.005)
-        except Exception:
-            feat_sensitivities[label] = 0.02
+    # Compute contextual z-score deviations from the predicted tier norms
+    norms = TIER_NORMS.get(pred_class, TIER_NORMS["High"])
+    stds = TIER_STDS.get(pred_class, TIER_STDS["High"])
+    user_vals = {
+        "Total Monthly Income": total_income,
+        "Family Size": family_size,
+        "Minor Dependents": req.dependents_0_18,
+        "Children in School": req.children_in_school,
+        "School Attendance Rate": ratio,
+        "Dependency Burden": dep_ratio,
+        "Out-of-School Children": out_of_school,
+        "Income per Dependent": income_per_dep,
+    }
+    norm_keys = dict(FEATURE_NAMES)
 
-    total_sens = sum(feat_sensitivities.values())
-    sorted_sens = sorted(feat_sensitivities.items(), key=lambda x: x[1], reverse=True)
-    feature_impacts = [
-        {"feature": name, "impact": round((val / total_sens) * 100, 1)}
-        for name, val in sorted_sens
-    ]
+    # Blend: tree_importance × (1 + z_score_deviation) to amplify features that are abnormal
+    hybrid_scores = {}
+    for label in tree_weights:
+        nk = norm_keys[label]
+        z = abs(user_vals[label] - norms[nk]) / max(stds[nk], 0.01)
+        hybrid_scores[label] = tree_weights[label] * (1.0 + min(z, 5.0))
+
+    FEATURE_DETAILS = {
+        "Total Monthly Income": {
+            "format": lambda v: f"₱{v:,.0f}/mo",
+            "desc": "Combined monthly household earning capacity"
+        },
+        "Income per Dependent": {
+            "format": lambda v: f"₱{v:,.0f}/child",
+            "desc": "Monthly earnings available per minor dependent"
+        },
+        "Family Size": {
+            "format": lambda v: f"{int(v)} members",
+            "desc": "Total household headcount supported"
+        },
+        "Minor Dependents": {
+            "format": lambda v: f"{int(v)} dependents",
+            "desc": "Children under 18 requiring support"
+        },
+        "Children in School": {
+            "format": lambda v: f"{int(v)} enrolled",
+            "desc": "School-age children attending school"
+        },
+        "School Attendance Rate": {
+            "format": lambda v: f"{v*100:.0f}% rate",
+            "desc": "Proportion of school-age children in school"
+        },
+        "Dependency Burden": {
+            "format": lambda v: f"{v*100:.0f}% minors",
+            "desc": "Proportion of household that are minors"
+        },
+        "Out-of-School Children": {
+            "format": lambda v: f"{int(v)} out of school",
+            "desc": "Children currently not attending school"
+        },
+    }
+
+    total_hybrid = sum(hybrid_scores.values())
+    sorted_hybrid = sorted(hybrid_scores.items(), key=lambda x: x[1], reverse=True)
+    feature_impacts = []
+    for rank, (name, val) in enumerate(sorted_hybrid[:6], 1):
+        pct = round((val / max(total_hybrid, 0.001)) * 100, 1)
+        detail = FEATURE_DETAILS.get(name, {})
+        fmt_val = detail["format"](user_vals[name]) if "format" in detail else str(user_vals[name])
+        feature_impacts.append({
+            "feature": name,
+            "impact": pct,
+            "user_value": fmt_val,
+            "desc": detail.get("desc", ""),
+            "rank": rank,
+        })
+
+    # ── Vulnerability Flags: warn social workers about critical risk indicators ──
+    vulnerability_flags = []
+    if req.dependents_0_18 > 0 and ratio < 0.5:
+        vulnerability_flags.append({
+            "flag": "Low School Attendance",
+            "severity": "critical" if ratio < 0.35 else "warning",
+            "detail": f"{int(out_of_school)} out of {int(req.dependents_0_18)} children are not in school ({(1-ratio)*100:.0f}% out-of-school rate)."
+        })
+    if req.family_size >= 8:
+        vulnerability_flags.append({
+            "flag": "Large Household Burden",
+            "severity": "warning",
+            "detail": f"Family of {int(req.family_size)} is significantly above the District V average of 5.3 members."
+        })
+    if req.dependents_0_18 >= 5:
+        vulnerability_flags.append({
+            "flag": "High Dependency Load",
+            "severity": "warning",
+            "detail": f"{int(req.dependents_0_18)} minor dependents place heavy financial and caregiving strain."
+        })
+    if total_income > 20000:
+        if req.dependents_0_18 >= 4 and income_per_dep < 8000:
+            vulnerability_flags.append({
+                "flag": "Income-to-Burden Mismatch",
+                "severity": "warning",
+                "detail": f"Despite high household income, supporting {int(req.dependents_0_18)} dependents leaves only PHP {income_per_dep:,.0f}/dependent."
+            })
 
     tier_meaning = "Survival · High Vulnerability" if pred_class == "Low" else (
         "Subsistence · Moderate Vulnerability" if pred_class == "Middle" else "Self-Sufficient · Stable"
@@ -852,21 +961,23 @@ def classify_individual(req: ClassifyIndividualRequest):
     if GEMINI_CLIENT:
         try:
             top_factors_str = ", ".join([f"{f['feature']} ({f['impact']}%)" for f in feature_impacts[:3]])
+            vuln_text = ""
+            if vulnerability_flags:
+                vuln_text = "\n- VULNERABILITY WARNINGS: " + "; ".join([f"{v['flag']}: {v['detail']}" for v in vulnerability_flags])
             barangay_str = f"Barangay {req.barangay}" if req.barangay else "District V"
             ai_prompt = f"""You are KalingaBot, an expert Philippine social welfare AI assistant for Quezon City District V.
 Analyze this household data from {barangay_str} classified by our Stacking ML Ensemble model:
 - Barangay: {barangay_str}, Quezon City District V
-- Monthly Per-Capita Income: PHP {req.monthly_per_capita_income:,.0f}
-- Family Size: {int(req.family_size)} members
+- Total Household Monthly Income: PHP {total_income:,.0f}/month
+- Family Size: {int(family_size)} members
 - Dependents under 18: {int(req.dependents_0_18)}
-- Children in School: {int(req.children_in_school)}
-- 4Ps Household Status: {req.household_status}
+- Children in School: {int(req.children_in_school)} out of {int(req.dependents_0_18)} ({ratio*100:.0f}% attendance)
 - Predicted SWDI Tier: {pred_class} ({tier_meaning}) with {confidence*100:.1f}% confidence
-- Top Model Decision Drivers: {top_factors_str}
+- Top Model Decision Drivers: {top_factors_str}{vuln_text}
 
 Respond strictly in valid JSON format matching this schema:
 {{
-  "interpretation": "2 concise, encouraging sentences explaining why this family in {barangay_str} was classified into this tier based on their specific numbers and highlighting their immediate next priority. Do not use asterisks or markdown bold.",
+  "interpretation": "2 concise, encouraging sentences explaining why this family in {barangay_str} was classified into this tier based on their specific numbers. If there are vulnerability warnings, acknowledge them honestly and highlight the most urgent priority. Do not use asterisks or markdown bold.",
   "recommendations": [
     {{
       "name": "Program Name (e.g. DSWD 4Ps, QC Educational Grant, DSWD SLP, DOLE TUPAD, TESDA, Barangay Livelihood Desk)",
@@ -876,7 +987,7 @@ Respond strictly in valid JSON format matching this schema:
     }}
   ]
 }}
-Provide 2 to 3 tailored recommendations."""
+Provide 2 to 3 tailored recommendations. If vulnerability flags exist, prioritize education or child welfare programs."""
 
             resp = GEMINI_CLIENT.models.generate_content(
                 model=GEMINI_MODEL,
@@ -896,9 +1007,9 @@ Provide 2 to 3 tailored recommendations."""
     if not recommendations:
         if pred_class == "Low":
             recommendations = [
-                {"name": "DSWD Pantawid Pamilyang Pilipino Program (4Ps)", "agency": "DSWD", "sector": "Financial Assistance", "rationale": f"Provides conditional cash transfers to support basic food & health needs for {int(req.family_size)} household members."},
+                {"name": "DSWD Pantawid Pamilyang Pilipino Program (4Ps)", "agency": "DSWD", "sector": "Financial Assistance", "rationale": f"Provides conditional cash transfers to support basic food & health needs for {int(family_size)} household members."},
                 {"name": "QC LGU Educational Assistance Subsidy", "agency": "QC LGU / DepEd", "sector": "Education Support", "rationale": f"Covers school fees, supplies, and uniforms for {int(req.dependents_0_18)} dependent children living at home."},
-                {"name": "Assistance to Individuals in Crisis Situations (AICS)", "agency": "DSWD / QC SSDD", "sector": "Emergency Relief", "rationale": f"Emergency safety net cash support to alleviate critical monthly income deficits (PHP {req.monthly_per_capita_income:,.0f}/capita)."}
+                {"name": "Assistance to Individuals in Crisis Situations (AICS)", "agency": "DSWD / QC SSDD", "sector": "Emergency Relief", "rationale": f"Emergency safety net cash support to alleviate critical monthly income deficits."}
             ]
         elif pred_class == "Middle":
             recommendations = [
@@ -907,16 +1018,26 @@ Provide 2 to 3 tailored recommendations."""
                 {"name": "Tulong Panghanapbuhay sa Ating Disadvantaged/Displaced Workers (TUPAD)", "agency": "DOLE", "sector": "Emergency Employment", "rationale": "Short-term community work opportunities providing wage support during low-earning periods."}
             ]
         else:
-            recommendations = [
-                {"name": "QC Small Business Development & MSME Financing", "agency": "QC SBCorp / DTI", "sector": "Enterprise Growth", "rationale": "Low-interest credit lines and business development services to expand self-sustaining enterprises."},
-                {"name": "Quezon City Tertiary Academic Scholarship Program", "agency": "QC Youth Development Office", "sector": "Higher Education", "rationale": f"Higher education tuition subsidies for the {int(req.children_in_school)} student(s) entering tertiary levels."}
-            ]
+            # If Level 3 but has vulnerability flags, prioritize education/welfare
+            if vulnerability_flags:
+                recommendations = [
+                    {"name": "QC LGU Educational Assistance & Back-to-School Program", "agency": "QC LGU / DepEd", "sector": "Education Support", "rationale": f"Urgent enrollment assistance for the {int(out_of_school)} out-of-school children to prevent long-term poverty traps."},
+                    {"name": "Barangay Council for the Protection of Children (BCPC)", "agency": "Barangay LGU / DSWD", "sector": "Child Welfare", "rationale": f"Case management and monitoring for {int(req.dependents_0_18)} minor dependents to ensure access to education and health services."},
+                    {"name": "TESDA Community-Based Skills Training", "agency": "TESDA", "sector": "Skills Training", "rationale": "Vocational training for older dependents approaching working age to build future self-reliance."}
+                ]
+            else:
+                recommendations = [
+                    {"name": "QC Small Business Development & MSME Financing", "agency": "QC SBCorp / DTI", "sector": "Enterprise Growth", "rationale": "Low-interest credit lines and business development services to expand self-sustaining enterprises."},
+                    {"name": "Quezon City Tertiary Academic Scholarship Program", "agency": "QC Youth Development Office", "sector": "Higher Education", "rationale": f"Higher education tuition subsidies for the {int(req.children_in_school)} student(s) entering tertiary levels."}
+                ]
 
     if not interpretation:
+        vuln_note = ""
+        if vulnerability_flags:
+            vuln_note = f" However, {vulnerability_flags[0]['detail']} Immediate attention to {vulnerability_flags[0]['flag'].lower()} is recommended."
         interpretation = (
-            f"With a monthly per-capita income of PHP {req.monthly_per_capita_income:,.0f} and {int(req.family_size)} household members, "
-            f"the ensemble model classifies this family into {tier_meaning} at {confidence*100:.1f}% confidence. "
-            f"Targeted support in {recommendations[0]['sector'].lower()} will be most effective in reinforcing their socio-economic resilience."
+            f"With a total monthly household income of PHP {total_income:,.0f} supporting {int(family_size)} members, "
+            f"the ensemble model classifies this family into {tier_meaning} at {confidence*100:.1f}% confidence.{vuln_note}"
         )
 
     return {
@@ -925,8 +1046,11 @@ Provide 2 to 3 tailored recommendations."""
         "confidence": confidence,
         "probabilities": prob_dict,
         "feature_impacts": feature_impacts,
+        "vulnerability_flags": vulnerability_flags,
         "recommendations": recommendations,
         "interpretation": interpretation,
+        "total_monthly_income": round(total_income, 2),
+        "family_size": int(family_size),
     }
 
 @app.get("/api/geojson/polygons")
