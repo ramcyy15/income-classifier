@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { LayoutDashboard, Sliders, FileText, UserSearch, Info } from "lucide-react";
+import { ScanSearch, Info } from "lucide-react";
 import NavInfoModal from "./NavInfoModal";
 import logo from "../assets/logo.png";
 
@@ -7,10 +7,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
   const [infoOpen, setInfoOpen] = useState(null); // holds the pageId of the open info modal
 
   const navItems = [
-    { id: "dashboard",  label: "Overview",    icon: LayoutDashboard },
-    { id: "simulation", label: "Intervention", icon: Sliders },
-    { id: "briefs",     label: "Policy Briefs", icon: FileText },
-    { id: "classifier", label: "Classify Family", icon: UserSearch },
+    { id: "classifier", label: "Classify",  icon: ScanSearch },
   ];
 
   return (
@@ -19,7 +16,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
         <div className="flex flex-col items-center gap-8 w-full">
           {/* Logo emblem */}
           <div
-            onClick={() => setActiveTab("dashboard")}
+            onClick={() => setActiveTab("classifier")}
             title="District V Income Intelligence"
             className="w-11 h-11 rounded-2xl bg-white flex items-center justify-center cursor-pointer hover:bg-slate-50 transition-colors"
           >

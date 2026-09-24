@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, TrendingUp, DollarSign, ShieldCheck, MoreVertical, ArrowUpRight } from 'lucide-react';
+import { Users, TrendingUp, DollarSign, AlertTriangle, ArrowUpRight } from 'lucide-react';
 
 export default function KpiGrid({ metrics, communityCounts }) {
   if (!metrics) return null;
@@ -33,15 +33,16 @@ export default function KpiGrid({ metrics, communityCounts }) {
       icon: DollarSign,
     },
     {
-      title: 'Model Confidence',
-      badge: 'Within 1 Tier',
-      badgeColor: 'bg-sky-50 text-sky-700',
-      value: `${metrics.within_one_tier || '84.6'}%`,
-      trend: `${metrics.conformal_coverage || '90.4'}% conformal guarantee`,
-      trendPositive: true,
-      icon: ShieldCheck,
+      title: 'Priority Barangays',
+      badge: 'Needs Attention',
+      badgeColor: 'bg-red-50 text-red-700',
+      value: communityCounts?.priority ?? '—',
+      trend: `${communityCounts?.developing ?? '—'} developing · ${communityCounts?.stable ?? '—'} stable`,
+      trendPositive: false,
+      icon: AlertTriangle,
     },
   ];
+
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -61,9 +62,6 @@ export default function KpiGrid({ metrics, communityCounts }) {
                   {card.badge}
                 </span>
               </div>
-              <button className="text-slate-300 hover:text-slate-500">
-                <MoreVertical className="w-4 h-4" />
-              </button>
             </div>
 
             <div className="flex items-baseline justify-between mt-1">

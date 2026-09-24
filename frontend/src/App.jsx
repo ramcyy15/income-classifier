@@ -1,65 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import KpiGrid from './components/KpiGrid';
-import OverviewMap from './components/OverviewMap';
-import BarangayDirectory from './components/BarangayDirectory';
-import BarangayProfile from './components/BarangayProfile';
-import SimulationView from './components/SimulationView';
-import PolicyBriefsView from './components/PolicyBriefsView';
-import SimulationModal from './components/SimulationModal';
-import PolicyBriefModal from './components/PolicyBriefModal';
-import IndividualClassifier from './components/IndividualClassifier';
-import { fetchOverview, fetchBarangays, fetchBarangayDetails } from './services/api';
+import ClassificationCenter from './components/ClassificationCenter';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [overview, setOverview] = useState(null);
-  const [barangays, setBarangays] = useState([]);
-  const [selectedBarangay, setSelectedBarangay] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  // Modals state
-  const [showSimulation, setShowSimulation] = useState(false);
-  const [showBrief, setShowBrief] = useState(false);
-
-  useEffect(() => {
-    async function loadInitialData() {
-      try {
-        const [ovData, brgyList] = await Promise.all([
-          fetchOverview(),
-          fetchBarangays(),
-        ]);
-        setOverview(ovData);
-        setBarangays(brgyList);
-
-        // Auto select first barangay
-        if (brgyList && brgyList.length > 0) {
-          const detail = await fetchBarangayDetails(brgyList[0].name);
-          setSelectedBarangay(detail);
-        }
-      } catch (err) {
-        console.error('Failed to load initial data:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadInitialData();
-  }, []);
-
-  const handleSelectBarangay = async (b) => {
-    try {
-      const details = await fetchBarangayDetails(b.name);
-      setSelectedBarangay(details);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const filteredBarangays = barangays.filter(b => 
-    b.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const [activeTab, setActiveTab] = useState('classifier');
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-50 font-sans text-slate-900 antialiased">
@@ -69,94 +14,13 @@ export default function App() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         {/* Header */}
-        <Header
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          barangays={filteredBarangays}
-          selectedBarangay={selectedBarangay}
-          onSelectBarangay={handleSelectBarangay}
-        />
+        <Header />
 
         {/* Dynamic Scrollable Body */}
-        <main className="flex-1 overflow-y-auto px-8 py-6 space-y-6">
-          {/* Top 4 KPI Metrics */}
-          <KpiGrid 
-            metrics={overview?.metrics} 
-            communityCounts={overview?.community_counts} 
-          />
-
-          {/* Tab 1: Overview with Clean Free Map + Directory + Profile */}
-          {activeTab === 'dashboard' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
-              {/* Card 1: Barangay Roster — fixed height, scrollable */}
-              <div className="h-[420px]">
-                <BarangayDirectory
-                  barangays={filteredBarangays}
-                  selectedBarangay={selectedBarangay}
-                  onSelectBarangay={handleSelectBarangay}
-                />
-              </div>
-
-              {/* Card 2: Overview Map — matches roster height */}
-              <div className="h-[420px]">
-                <OverviewMap
-                  barangays={filteredBarangays}
-                  selectedBarangay={selectedBarangay}
-                  onSelectBarangay={handleSelectBarangay}
-                />
-              </div>
-
-              {/* Card 3: Barangay Profile — auto height, content fills naturally */}
-              <div className="h-[420px]">
-                <BarangayProfile
-                  barangay={selectedBarangay}
-                  onOpenSimulation={() => setShowSimulation(true)}
-                  onOpenBrief={() => setShowBrief(true)}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Tab 2: Intervention View */}
-          {activeTab === 'simulation' && (
-            <SimulationView
-              barangays={barangays}
-              selectedBarangay={selectedBarangay}
-              onSelectBarangay={handleSelectBarangay}
-            />
-          )}
-
-          {/* Tab 3: Policy Briefs View */}
-          {activeTab === 'briefs' && (
-            <PolicyBriefsView
-              barangays={barangays}
-              selectedBarangay={selectedBarangay}
-              onSelectBarangay={handleSelectBarangay}
-              onOpenSimulation={() => setActiveTab('simulation')}
-            />
-          )}
-
-          {/* Tab 4: Individual Family Classifier */}
-          {activeTab === 'classifier' && (
-            <IndividualClassifier />
-          )}
+        <main className="flex-1 overflow-y-auto px-8 py-6">
+          <ClassificationCenter />
         </main>
       </div>
-
-      {/* Pop-up Modals for Quick Actions */}
-      {showSimulation && (
-        <SimulationModal
-          barangay={selectedBarangay}
-          onClose={() => setShowSimulation(false)}
-        />
-      )}
-
-      {showBrief && (
-        <PolicyBriefModal
-          barangay={selectedBarangay}
-          onClose={() => setShowBrief(false)}
-        />
-      )}
     </div>
   );
 }

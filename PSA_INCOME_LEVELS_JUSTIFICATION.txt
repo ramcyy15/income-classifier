@@ -1,0 +1,83 @@
+================================================================================
+PHILIPPINE STATISTICS AUTHORITY (PSA) & PIDS INCOME TIER CLASSIFICATION
+JUSTIFICATION AND FORMULA EXPLANATION FOR THESIS DEFENSE
+================================================================================
+
+1. WHAT IS THE OFFICIAL PHILIPPINE GOVERNMENT STANDARD?
+--------------------------------------------------------------------------------
+In the Philippines, the official government standard for income and poverty
+classification is defined by the Philippine Statistics Authority (PSA) and
+the Philippine Institute for Development Studies (PIDS) under the National
+Economic and Development Authority (NEDA).
+
+The foundational formula is based on the official Poverty Threshold (PT).
+- Poverty Threshold (PT): The minimum amount required per capita to satisfy
+  basic food (2,000 kcal/day nutritional requirement) and non-food needs
+  (shelter, clothing, utilities, health, and education).
+- According to official PSA FIES data, the average monthly poverty threshold
+  for a standard Filipino family of 5 is approximately PHP 12,000 to PHP 13,800.
+
+
+2. HOW DID WE COME UP WITH LEVEL 1, LEVEL 2, AND LEVEL 3?
+--------------------------------------------------------------------------------
+Officially, PIDS and PSA define seven (7) specific income brackets. Because
+training a machine learning model on 7 fragmented micro-categories causes severe
+data sparsity and low generalization, researchers and government economists
+(Albert et al., PIDS Policy Study) officially cluster them into three (3)
+macro socio-economic tiers:
+
+--------------------------------------------------------------------------------
+TIER LABEL      OFFICIAL PSA / PIDS SUB-CLASSES        FORMULA & THRESHOLD
+--------------------------------------------------------------------------------
+LEVEL 1         • Poor                                 Income < 2 x Poverty Line
+(Low-Income)    • Low-Income (but not poor)            (< PHP 24,000 / month)
+
+LEVEL 2         • Lower Middle-Income Class            2 x to 12 x Poverty Line
+(Middle-Income) • Middle Middle-Income Class           (PHP 24,000 - PHP 140,000)
+                • Upper Middle-Income Class
+
+LEVEL 3         • Upper-Income Class (not rich)        Income > 12 x Poverty Line
+(High-Income)   • Rich / High-Income Class             (> PHP 140,000 / month)
+--------------------------------------------------------------------------------
+
+Citation for Paper / Defense:
+Albert, J. R. G., Santos, A. G. F., & Vizmanos, J. F. V. "Defining and
+Profiling the Middle Class." Philippine Institute for Development Studies (PIDS).
+
+
+3. HOW DOES A HOUSEHOLD FORMULA APPLY TO A BARANGAY COMMUNITY?
+--------------------------------------------------------------------------------
+Question: "The PSA formula is for a household. How did you apply it to a barangay?"
+
+Answer:
+A barangay does not earn a single salary; a barangay is an aggregate community of
+households. Therefore, we use two official statistical principles:
+
+1. COMMUNITY AGGREGATE INCOME (PSA FIES):
+   - The barangay's economic tier is determined by its Average Monthly Household
+     Income (avg_monthly_income_php).
+   - If the average household in that barangay earns below 2x Poverty Threshold,
+     the community has a dominant Low-Income profile.
+
+2. PSA MULTIDIMENSIONAL POVERTY INDEX (MPI) INDICATORS:
+   Income alone can be misleading. Therefore, the model assesses 9 additional
+   community-level indicators from the PSA Census of Population and Housing (CPH)
+   and Labor Force Survey (LFS):
+   - Informal Settlement Rate (%)
+   - Access to Electricity (%)
+   - Access to Safe Drinking Water (%)
+   - Sanitary Toilet Coverage (%)
+   - Permanent Wall & Roof Housing Materials (%)
+   - Youth Net School Enrollment Rate (%)
+   - High School Education Attainment (%)
+   - Household Head Employment Rate (%)
+   - Average Family Size (members)
+
+SUMMARY DEFINITION:
+- Level 1 Barangay: Community where average income is below 2x Poverty Line,
+  characterized by high informal settlement rates and deficits in basic utilities.
+- Level 2 Barangay: Community with transitional income (2x to 12x Poverty Line),
+  moderate utility coverage, and growing educational attainment.
+- Level 3 Barangay: Economically developed community with high average income,
+  near-complete utility integration, permanent housing, and low deprivation.
+================================================================================

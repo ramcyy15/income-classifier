@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
-import { Users, BarChart2, PieChart, Cpu } from 'lucide-react';
-import { PredictedVsActualChart, ShapDriversChart, IncomeDonutChart } from './AnalyticsCharts';
+import { Users, PieChart, Cpu } from 'lucide-react';
+import { ShapDriversChart, IncomeDonutChart } from './AnalyticsCharts';
 
 const TABS = [
   { id: 'profile',   label: 'Profile',   icon: Users },
-  { id: 'accuracy',  label: 'Accuracy',  icon: BarChart2 },
   { id: 'drivers',   label: 'Drivers',   icon: Cpu },
-  { id: 'dist',      label: 'Dist.',     icon: PieChart },
+  { id: 'dist',      label: 'Distribution', icon: PieChart },
 ];
 
-export default function BarangayProfile({ barangay, onOpenSimulation, onOpenBrief }) {
+export default function BarangayProfile({ barangay }) {
   const [tab, setTab] = useState('profile');
 
   if (!barangay) {
@@ -20,7 +19,7 @@ export default function BarangayProfile({ barangay, onOpenSimulation, onOpenBrie
         </div>
         <h3 className="text-sm font-bold text-slate-800">Select a Barangay</h3>
         <p className="text-[11px] text-slate-400 mt-1 max-w-xs">
-          Click a pin on the map or pick from the roster to view income tiers, model accuracy, and SHAP drivers.
+          Pick a barangay from the roster to view income tiers, SHAP decision drivers, and class distribution.
         </p>
       </div>
     );
@@ -146,16 +145,6 @@ export default function BarangayProfile({ barangay, onOpenSimulation, onOpenBrie
           </div>
         )}
 
-        {/* TAB: Model Accuracy (Predicted vs Actual) */}
-        {tab === 'accuracy' && (
-          <div className="flex flex-col h-full">
-            <PredictedVsActualChart
-              tierDistribution={tier_distribution}
-              actualDistribution={actual_distribution}
-            />
-          </div>
-        )}
-
         {/* TAB: SHAP Drivers */}
         {tab === 'drivers' && (
           <div className="flex flex-col h-full">
@@ -163,7 +152,7 @@ export default function BarangayProfile({ barangay, onOpenSimulation, onOpenBrie
           </div>
         )}
 
-        {/* TAB: Income Distribution Donut */}
+        {/* TAB: Income Class Distribution */}
         {tab === 'dist' && (
           <div className="flex flex-col h-full">
             <IncomeDonutChart

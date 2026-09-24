@@ -16,6 +16,7 @@ BASE = Path(__file__).resolve().parent.parent
 OUT = BASE / "outputs"
 MODEL_PATH = BASE / "models" / "stacking_model.joblib"
 INDIVIDUAL_MODEL_PATH = BASE / "models" / "individual_family_model.joblib"
+BARANGAY_MODEL_PATH = BASE / "models" / "barangay_stacking_model.joblib"
 BRGY_PATH = OUT / "merged_barangay_dataset.csv"
 FAMILIES_PATH = OUT / "family_predictions.csv"
 SHAP_PATH = OUT / "shap_by_barangay.csv"
@@ -167,6 +168,14 @@ def get_individual_model():
         else:
             _CACHE["individual_model"] = None
     return _CACHE["individual_model"]
+
+def get_barangay_model():
+    if "barangay_model" not in _CACHE:
+        if BARANGAY_MODEL_PATH.exists():
+            _CACHE["barangay_model"] = joblib.load(BARANGAY_MODEL_PATH)
+        else:
+            _CACHE["barangay_model"] = None
+    return _CACHE["barangay_model"]
 
 def get_metrics():
     accuracy = 0.4994
@@ -1051,6 +1060,185 @@ Provide 2 to 3 tailored recommendations. If vulnerability flags exist, prioritiz
         "interpretation": interpretation,
         "total_monthly_income": round(total_income, 2),
         "family_size": int(family_size),
+    }
+
+
+# ── Barangay-Level Income Classifier ─────────────────────────────────────────
+class ClassifyBarangayRequest(BaseModel):
+    barangay: Optional[str] = "Custom"
+    pct_employed_head: float
+    avg_monthly_income_php: float
+    pct_with_access_to_electricity: float
+    pct_with_safe_water_access: float
+    pct_with_sanitary_toilet: float
+    net_enrollment_rate: float
+    pct_permanent_house_material: float
+    pct_informal_settlers: float
+    avg_family_size: float
+    pct_completed_secondary_education: float
+
+@app.post("/api/classify-barangay")
+def classify_barangay(req: ClassifyBarangayRequest):
+    model_obj = get_barangay_model()
+    if not model_obj:
+        raise HTTPException(status_code=500, detail="Barangay ML Model not available.")
+
+    pipeline = model_obj["pipeline"]
+    classes = model_obj["classes"]
+    base_weights = model_obj.get("feature_importances", {})
+
+    input_df = pd.DataFrame([{
+        "pct_employed_head": req.pct_employed_head,
+        "avg_monthly_income_php": req.avg_monthly_income_php,
+        "pct_with_access_to_electricity": req.pct_with_access_to_electricity,
+        "pct_with_safe_water_access": req.pct_with_safe_water_access,
+        "pct_with_sanitary_toilet": req.pct_with_sanitary_toilet,
+        "net_enrollment_rate": req.net_enrollment_rate,
+        "pct_permanent_house_material": req.pct_permanent_house_material,
+        "pct_informal_settlers": req.pct_informal_settlers,
+        "avg_family_size": req.avg_family_size,
+        "pct_completed_secondary_education": req.pct_completed_secondary_education,
+    }])
+
+    try:
+        probs = pipeline.predict_proba(input_df)[0]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Inference error: {str(e)}")
+
+    best_idx = int(np.argmax(probs))
+    pred_class = classes[best_idx]
+    confidence = float(probs[best_idx])
+    prob_dict = {c: float(probs[i]) for i, c in enumerate(classes)}
+
+    user_vals = {
+        "Employed Household Heads": req.pct_employed_head,
+        "Average Monthly Income": req.avg_monthly_income_php,
+        "Electricity Access": req.pct_with_access_to_electricity,
+        "Safe Drinking Water Access": req.pct_with_safe_water_access,
+        "Sanitary Toilet Facility": req.pct_with_sanitary_toilet,
+        "Net School Enrollment": req.net_enrollment_rate,
+        "Permanent Housing Materials": req.pct_permanent_house_material,
+        "Informal Settlement Rate": req.pct_informal_settlers,
+        "Average Family Size": req.avg_family_size,
+        "Secondary Education Completion": req.pct_completed_secondary_education,
+    }
+
+    NORMS = {
+        "Employed Household Heads": 59.0,
+        "Average Monthly Income": 25500.0,
+        "Electricity Access": 76.0,
+        "Safe Drinking Water Access": 69.0,
+        "Sanitary Toilet Facility": 67.7,
+        "Net School Enrollment": 80.0,
+        "Permanent Housing Materials": 55.2,
+        "Informal Settlement Rate": 31.0,
+        "Average Family Size": 5.15,
+        "Secondary Education Completion": 55.1,
+    }
+
+    STDS = {
+        "Employed Household Heads": 14.0,
+        "Average Monthly Income": 9500.0,
+        "Electricity Access": 13.0,
+        "Safe Drinking Water Access": 14.5,
+        "Sanitary Toilet Facility": 15.0,
+        "Net School Enrollment": 9.0,
+        "Permanent Housing Materials": 17.5,
+        "Informal Settlement Rate": 15.5,
+        "Average Family Size": 0.8,
+        "Secondary Education Completion": 17.5,
+    }
+
+    KEY_TO_LABEL = {
+        "pct_employed_head": "Employed Household Heads",
+        "avg_monthly_income_php": "Average Monthly Income",
+        "pct_with_access_to_electricity": "Electricity Access",
+        "pct_with_safe_water_access": "Safe Drinking Water Access",
+        "pct_with_sanitary_toilet": "Sanitary Toilet Facility",
+        "net_enrollment_rate": "Net School Enrollment",
+        "pct_permanent_house_material": "Permanent Housing Materials",
+        "pct_informal_settlers": "Informal Settlement Rate",
+        "avg_family_size": "Average Family Size",
+        "pct_completed_secondary_education": "Secondary Education Completion",
+    }
+
+    DETAIL = {
+        "Average Monthly Income": {
+            "format": lambda v: f"₱{v:,.0f}/mo",
+            "desc": "Primary economic capacity indicator (PSA FIES benchmark)"
+        },
+        "Informal Settlement Rate": {
+            "format": lambda v: f"{v:.1f}%",
+            "desc": "Households residing in informal/insecure land tenure (PSA CPH Housing dimension)"
+        },
+        "Permanent Housing Materials": {
+            "format": lambda v: f"{v:.1f}%",
+            "desc": "Quality of physical housing structures (PSA MPI Housing dimension)"
+        },
+        "Electricity Access": {
+            "format": lambda v: f"{v:.1f}%",
+            "desc": "Access to electrical power grid (Basic Infrastructure dimension)"
+        },
+        "Safe Drinking Water Access": {
+            "format": lambda v: f"{v:.1f}%",
+            "desc": "Safe water availability (PSA Water & Sanitation dimension)"
+        },
+        "Sanitary Toilet Facility": {
+            "format": lambda v: f"{v:.1f}%",
+            "desc": "Sanitary toilet access (PSA Water & Sanitation dimension)"
+        },
+        "Secondary Education Completion": {
+            "format": lambda v: f"{v:.1f}%",
+            "desc": "Educational attainment of household heads (Human Capital dimension)"
+        },
+        "Net School Enrollment": {
+            "format": lambda v: f"{v:.1f}%",
+            "desc": "School participation rate of school-age children (PSA MPI Education)"
+        },
+        "Employed Household Heads": {
+            "format": lambda v: f"{v:.1f}%",
+            "desc": "Gainful employment rate among household providers (PSA Employment)"
+        },
+        "Average Family Size": {
+            "format": lambda v: f"{v:.1f} members",
+            "desc": "Dependency load sharing household livelihood"
+        },
+    }
+
+    hybrid = {}
+    for feat_key, weight in base_weights.items():
+        label = KEY_TO_LABEL.get(feat_key, feat_key)
+        z = abs(user_vals.get(label, 0) - NORMS.get(label, 1)) / max(STDS.get(label, 1), 0.001)
+        hybrid[label] = weight * (1.0 + min(z, 5.0))
+
+    total_hybrid = sum(hybrid.values())
+    sorted_hybrid = sorted(hybrid.items(), key=lambda x: x[1], reverse=True)
+
+    feature_impacts = []
+    for rank, (name, val) in enumerate(sorted_hybrid[:6], 1):
+        pct = round((val / max(total_hybrid, 0.001)) * 100, 1)
+        d = DETAIL.get(name, {})
+        fmt_val = d["format"](user_vals[name]) if "format" in d else str(user_vals[name])
+        feature_impacts.append({
+            "feature": name,
+            "impact": pct,
+            "user_value": fmt_val,
+            "desc": d.get("desc", ""),
+            "rank": rank,
+        })
+
+    tier_label = (
+        "Level 1 · Low-Income" if pred_class == "Low" else
+        "Level 2 · Middle-Income" if pred_class == "Middle" else
+        "Level 3 · High-Income"
+    )
+
+    return {
+        "predicted_class": pred_class,
+        "tier_label": tier_label,
+        "confidence": confidence,
+        "probabilities": prob_dict,
+        "feature_impacts": feature_impacts,
     }
 
 @app.get("/api/geojson/polygons")

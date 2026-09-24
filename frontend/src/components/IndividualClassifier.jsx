@@ -10,9 +10,9 @@ import {
 } from "recharts";
 
 const SWDI_META = {
-  Low:    { level: "SWDI Level 1", label: "Survival",        color: "#EF4444", bg: "bg-red-50",     border: "border-red-200",     text: "text-red-700" },
-  Middle: { level: "SWDI Level 2", label: "Subsistence",     color: "#F59E0B", bg: "bg-amber-50",   border: "border-amber-200",   text: "text-amber-700" },
-  High:   { level: "SWDI Level 3", label: "Self-Sufficient", color: "#10B981", bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700" },
+  Low:    { level: "Level 1", label: "Survival",        color: "#EF4444", bg: "bg-red-50",     border: "border-red-200",     text: "text-red-700" },
+  Middle: { level: "Level 2", label: "Subsistence",     color: "#F59E0B", bg: "bg-amber-50",   border: "border-amber-200",   text: "text-amber-700" },
+  High:   { level: "Level 3", label: "Self-Sufficient", color: "#10B981", bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700" },
 };
 
 const DISTRICT_V_BARANGAYS = [
@@ -35,18 +35,21 @@ const FEATURE_ICONS = {
 };
 
 const FIELDS = [
-  { id: "total_monthly_income", label: "Total Monthly Household Income (PHP)", type: "number", min: 0,  max: 500000, step: 500, placeholder: "e.g. 15,000", icon: "PhP", tip: "Total combined income of ALL earners in the household per month. (We will compute per-capita automatically.)" },
+  { id: "total_monthly_income", label: "Monthly Per-Capita Income (PHP)", type: "number", min: 0,  max: 500000, step: 500, placeholder: "e.g. 15,000", icon: "PhP", tip: "Total combined income of ALL earners in the household per month." },
   { id: "family_size",         label: "Family Size",                          type: "number", min: 1,  max: 20,     step: 1,   placeholder: "e.g. 5",      icon: "Fam", tip: "Total number of family members in the household." },
   { id: "dependents_0_18",     label: "Dependents below 18 yrs old",          type: "number", min: 0,  max: 20,     step: 1,   placeholder: "e.g. 3",      icon: "Dep", tip: "Number of children aged 0 to 18 living at home." },
   { id: "children_in_school",  label: "Children Attending School",             type: "number", min: 0,  max: 20,     step: 1,   placeholder: "e.g. 2",      icon: "Sch", tip: "Number of school-age children currently enrolled." },
 ];
+
+const FOUR_PS_STATUS_OPTIONS = ["Active", "Graduated", "Conditionally Compliant", "None"];
 
 const DEFAULT_FORM = {
   barangay: "Bagbag",
   total_monthly_income: "",
   family_size: "",
   dependents_0_18: "",
-  children_in_school: ""
+  children_in_school: "",
+  household_status: "None",
 };
 
 export default function IndividualClassifier() {
@@ -73,6 +76,7 @@ export default function IndividualClassifier() {
           family_size:          familySize,
           dependents_0_18:      Number(form.dependents_0_18),
           children_in_school:   Number(form.children_in_school),
+          household_status:     form.household_status,
         }),
       });
       if (!res.ok) throw new Error(await res.text());
@@ -88,22 +92,7 @@ export default function IndividualClassifier() {
   const meta = result ? (SWDI_META[result.predicted_class] ?? SWDI_META["Middle"]) : null;
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
-
-      {/* Page Header */}
-      <div className="bg-white rounded-2xl px-6 py-5 border border-slate-100 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-md shadow-indigo-600/25">
-            <User className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-base font-bold text-slate-900">Individual Family Classifier</h1>
-            <p className="text-[11px] text-slate-400 font-medium">
-              Enter family socio-economic data to classify the SWDI income tier using the Stacking Ensemble ML model.
-            </p>
-          </div>
-        </div>
-      </div>
+    <div className="space-y-5">
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
 
@@ -145,12 +134,11 @@ export default function IndividualClassifier() {
                   onMouseLeave={() => setHovered(null)}>
                   <label className="block text-[11px] font-semibold text-slate-600 mb-1">{field.label}</label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[9px] font-black text-slate-400 select-none pointer-events-none">{field.icon}</span>
                     <input
                       type={field.type} min={field.min} max={field.max} step={field.step}
                       value={form[field.id]} onChange={(e) => handleChange(field.id, e.target.value)}
                       placeholder={field.placeholder}
-                      className="w-full pl-9 pr-3 py-2 text-sm font-medium text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all placeholder:text-slate-300"
+                      className="w-full px-3.5 py-2 text-sm font-medium text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all placeholder:text-slate-300"
                     />
                   </div>
                   {hovered === field.id && (
@@ -160,12 +148,38 @@ export default function IndividualClassifier() {
                   )}
                 </div>
               ))}
+
+              {/* 4Ps Household Status Pill Selector */}
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1.5">
+                  4Ps Household Status
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {FOUR_PS_STATUS_OPTIONS.map((status) => {
+                    const isSelected = form.household_status === status;
+                    return (
+                      <button
+                        key={status}
+                        type="button"
+                        onClick={() => handleChange("household_status", status)}
+                        className={`text-[11px] font-semibold px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${
+                          isSelected
+                            ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                            : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                        }`}
+                      >
+                        {status}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
 
           <div className="pt-2">
             <button onClick={handleSubmit} disabled={!isFormValid || loading}
-              className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-[12px] flex items-center justify-center gap-2 shadow-md shadow-indigo-600/20 transition-all cursor-pointer">
+              className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-[13px] flex items-center justify-center gap-2 shadow-md shadow-indigo-600/20 transition-all cursor-pointer">
               {loading
                 ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Classifying...</>
                 : <><Sparkles className="w-4 h-4" /> Classify Family</>
@@ -187,9 +201,7 @@ export default function IndividualClassifier() {
         <div className="h-[520px] overflow-y-auto pr-1 space-y-4 rounded-2xl scrollbar-thin scrollbar-thumb-slate-200">
           {!result && !loading && (
             <div className="h-full bg-white rounded-2xl border border-dashed border-slate-200 flex flex-col items-center justify-center text-center p-10">
-              <div className="w-16 h-16 rounded-2xl bg-indigo-50/70 border border-indigo-100 flex items-center justify-center mb-3 p-1">
-                <img src={kalingaLogo} alt="KalingaBot AI" className="w-12 h-12 object-contain" />
-              </div>
+              <img src={kalingaLogo} alt="KalingaBot AI" className="w-16 h-16 object-contain mb-3" />
               <p className="text-sm font-bold text-slate-700">Ready to Classify</p>
               <p className="text-[11px] text-slate-400 mt-1 max-w-[240px] leading-relaxed">
                 Provide the household indicators on the left and run classification to view the ML predictions, confidence levels, and KalingaBot recommendations.
@@ -200,11 +212,11 @@ export default function IndividualClassifier() {
           {result && meta && (
             <>
               {/* SWDI Result Card */}
-              <div className={`rounded-2xl border ${meta.border} ${meta.bg} p-5 shadow-[0_2px_10px_rgba(0,0,0,0.02)]`}>
+              <div className={`rounded-2xl border ${meta.border} ${meta.bg} p-6 shadow-[0_2px_10px_rgba(0,0,0,0.02)]`}>
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">ML Classification Result</p>
-                    <h2 className={`text-2xl font-black ${meta.text}`}>{meta.level}</h2>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">ML CLASSIFICATION RESULT</p>
+                    <h2 className={`text-2xl font-black ${meta.text}`}>SWDI {meta.level}</h2>
                     <p className={`text-sm font-bold opacity-80 ${meta.text}`}>{meta.label}</p>
                   </div>
                   <div className="text-right">
@@ -212,14 +224,14 @@ export default function IndividualClassifier() {
                     <p className="text-[10px] font-semibold text-slate-400 mt-0.5">Model Confidence</p>
                   </div>
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   {Object.entries(result.probabilities ?? {}).map(([cls, prob]) => {
                     const m = SWDI_META[cls];
                     const pct = (prob * 100).toFixed(1);
                     return (
                       <div key={cls} className="flex items-center gap-2 text-[10px]">
-                        <span className="w-16 font-semibold text-slate-600 text-right flex-shrink-0">{m?.level?.replace("SWDI ", "")}</span>
-                        <div className="flex-1 bg-white/60 rounded-full h-2 overflow-hidden border border-white/80">
+                        <span className="w-16 font-semibold text-slate-600 text-right flex-shrink-0">{m?.level}</span>
+                        <div className="flex-1 bg-white/70 rounded-full h-2 overflow-hidden border border-white/90">
                           <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: m?.color }} />
                         </div>
                         <span className="w-10 font-bold text-right" style={{ color: m?.color }}>{pct}%</span>
