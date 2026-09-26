@@ -8,6 +8,8 @@ import kalingaLogo from "../assets/KalingaBot AI.png";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell
 } from "recharts";
+import GeoMap from "./GeoMap";
+import { saveClassificationRecord } from "../utils/historyStore";
 
 // Official PSA & PIDS Income Classification Tiers
 const PSA_TIER_META = {
@@ -286,6 +288,27 @@ export default function BarangayClassifier() {
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       setResult(data);
+
+      // Save to session classification history
+      try {
+        const topDriver = data.top_features && data.top_features.length > 0 ? data.top_features[0].feature : null;
+        saveClassificationRecord({
+          type: "barangay",
+          target: form.barangay,
+          predicted_class: data.predicted_class,
+          confidence: data.confidence ? Math.round(data.confidence * 100) : null,
+          top_feature: topDriver,
+          inputs: {
+            "Avg Monthly Income": `PHP ${Number(form.avgMonthlyIncomePhp).toLocaleString()}`,
+            "Informal Settlers": `${form.pctInformalSettlers}%`,
+            "Permanent Housing": `${form.pctPermanentHouseMaterial}%`,
+            "Employed Heads": `${form.pctEmployedHead}%`,
+            "Avg Family Size": form.avgFamilySize,
+          },
+        });
+      } catch (err) {
+        console.warn("Failed to record history:", err);
+      }
     } catch (e) {
       setError(e.message || "Failed to connect to classification server.");
     } finally {
@@ -363,9 +386,7 @@ export default function BarangayClassifier() {
               {/* Barangay Location Dropdown (Descriptive Target Label) */}
               <div>
                 <label className="block text-[11px] font-semibold text-slate-600 mb-1 flex items-center justify-between">
-                  <span className="flex items-center gap-1">
-                    <Building2 className="w-3 h-3 text-indigo-500" /> Target Barangay (Reference Community)
-                  </span>
+                  <span>Target Barangay (Reference Community)</span>
                   <span className="text-[9.5px] text-slate-400 font-normal">Identifies which community is being profiled</span>
                 </label>
                 <select
@@ -568,7 +589,13 @@ export default function BarangayClassifier() {
                 </div>
               </div>
 
-              {/* Feature Drivers */}
+              {/* ── Geo-Map ── */}
+              <GeoMap
+                barangay={form.barangay}
+                tier={result.predicted_class}
+              />
+
+              {/* ── Key Decision Drivers ── */}
               {result.feature_impacts?.length > 0 && (
                 <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_2px_10px_rgba(0,0,0,0.03)] p-5 space-y-3.5">
                   <div className="flex items-center justify-between">
@@ -633,6 +660,62 @@ export default function BarangayClassifier() {
                       );
                     })}
                   </div>
+                </div>
+              )}
+
+              {/* ── KalingaBot AI Suggestions ── */}
+              {(result.interpretation || result.recommendations?.length > 0) && (
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_2px_10px_rgba(0,0,0,0.03)] p-5 space-y-3.5">
+                  {/* Header */}
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={kalingaLogo}
+                      alt="KalingaBot"
+                      className="w-7 h-7 object-contain flex-shrink-0"
+                    />
+                    <div>
+                      <p className="text-xs font-bold text-slate-800">KalingaBot AI Suggestions</p>
+                      <p className="text-[10px] text-slate-400 font-medium">Gemini-powered recommendations based on this barangay's PSA indicators</p>
+                    </div>
+                  </div>
+
+                  {/* AI interpretation */}
+                  {result.interpretation && (
+                    <p className="text-[11px] text-slate-600 leading-relaxed bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
+                      {result.interpretation}
+                    </p>
+                  )}
+
+                  {/* Program cards */}
+                  {result.recommendations?.length > 0 && (
+                    <div className="space-y-2.5 pt-0.5">
+                      {result.recommendations.map((rec, i) => {
+                        const SECTOR_COLORS = {
+                          "Livelihood":        { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200" },
+                          "Education":         { bg: "bg-blue-50",    text: "text-blue-700",    border: "border-blue-200"    },
+                          "Housing":           { bg: "bg-amber-50",   text: "text-amber-700",   border: "border-amber-200"   },
+                          "Health":            { bg: "bg-rose-50",    text: "text-rose-700",    border: "border-rose-200"    },
+                          "Financial Support": { bg: "bg-indigo-50",  text: "text-indigo-700",  border: "border-indigo-200"  },
+                        };
+                        const colors = SECTOR_COLORS[rec.sector] || { bg: "bg-slate-50", text: "text-slate-700", border: "border-slate-200" };
+                        return (
+                          <div
+                            key={i}
+                            className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-all"
+                          >
+                            <div className="flex items-start justify-between gap-2 mb-1">
+                              <p className="text-[11px] font-bold text-slate-800 leading-tight">{rec.name}</p>
+                              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${colors.bg} ${colors.text} border ${colors.border}`}>
+                                {rec.sector}
+                              </span>
+                            </div>
+                            <p className="text-[10px] font-semibold text-indigo-600 mb-1">{rec.agency}</p>
+                            <p className="text-[10px] text-slate-500 leading-relaxed">{rec.rationale}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </>

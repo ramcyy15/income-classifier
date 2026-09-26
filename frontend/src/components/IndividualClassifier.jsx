@@ -8,6 +8,7 @@ import kalingaLogo from "../assets/KalingaBot AI.png";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell, ResponsiveContainer,
 } from "recharts";
+import { saveClassificationRecord } from "../utils/historyStore";
 
 const SWDI_META = {
   Low:    { level: "Level 1", label: "Survival",        color: "#EF4444", bg: "bg-red-50",     border: "border-red-200",     text: "text-red-700" },
@@ -80,7 +81,29 @@ export default function IndividualClassifier() {
         }),
       });
       if (!res.ok) throw new Error(await res.text());
-      setResult(await res.json());
+      const data = await res.json();
+      setResult(data);
+
+      try {
+        const topDriver = data.top_features && data.top_features.length > 0 ? data.top_features[0].feature : null;
+        saveClassificationRecord({
+          type: "individual",
+          target: `${form.barangay} Household`,
+          predicted_class: data.predicted_class,
+          confidence: data.confidence ? Math.round(data.confidence * 100) : null,
+          top_feature: topDriver,
+          inputs: {
+            "Barangay": form.barangay,
+            "Monthly Income": `PHP ${Number(form.total_monthly_income).toLocaleString()}`,
+            "Family Size": familySize,
+            "Dependents (0-18)": form.dependents_0_18,
+            "Children in School": form.children_in_school,
+            "4Ps Status": form.household_status,
+          },
+        });
+      } catch (err) {
+        console.warn("Failed to record history:", err);
+      }
     } catch (e) {
       setError(e.message || "Server error. Make sure the API is running.");
     } finally {
@@ -112,8 +135,8 @@ export default function IndividualClassifier() {
             <div className="space-y-3">
               {/* Barangay Location Dropdown */}
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1 flex items-center gap-1">
-                  <MapPin className="w-3 h-3 text-indigo-500" /> Barangay Location (District V)
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                  Barangay Location (District V)
                 </label>
                 <div className="relative">
                   <select

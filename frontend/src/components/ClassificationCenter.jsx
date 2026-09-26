@@ -49,19 +49,17 @@ export default function ClassificationCenter() {
         {/* Mode Toggle Switch */}
         <div className="flex items-center bg-slate-100 p-1 rounded-xl gap-1">
           {MODES.map((mode) => {
-            const Icon = mode.icon;
             const isActive = activeMode === mode.id;
             return (
               <button
                 key={mode.id}
                 onClick={() => setActiveMode(mode.id)}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   isActive
                     ? "bg-white text-slate-900 shadow-sm"
                     : "text-slate-500 hover:text-slate-700"
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? "text-indigo-600" : "text-slate-400"}`} />
                 {mode.short}
               </button>
             );

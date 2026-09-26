@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import ClassificationCenter from './components/ClassificationCenter';
+import HistoryView from './components/HistoryView';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('classifier');
@@ -18,7 +19,10 @@ export default function App() {
 
         {/* Dynamic Scrollable Body */}
         <main className="flex-1 overflow-y-auto px-8 py-6">
-          <ClassificationCenter />
+          {activeTab === 'classifier' && <ClassificationCenter />}
+          {activeTab === 'history' && (
+            <HistoryView onNavigateToClassifier={() => setActiveTab('classifier')} />
+          )}
         </main>
       </div>
     </div>

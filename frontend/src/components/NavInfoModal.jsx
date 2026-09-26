@@ -1,5 +1,5 @@
 import React from "react";
-import { X, ScanSearch } from "lucide-react";
+import { X, ScanSearch, History } from "lucide-react";
 
 const PAGE_INFO = {
   classifier: {
@@ -19,6 +19,26 @@ const PAGE_INFO = {
       {
         heading: "What the results show",
         body: "Each classification result shows the predicted SWDI income level, the model's confidence percentage, and the top socio-economic factors that most influenced the prediction — ranked by decision impact.",
+      },
+    ],
+  },
+  history: {
+    Icon: History,
+    color: "bg-indigo-600",
+    title: "Classification History & Comparison",
+    tagline: "Audit past predictions, compare scenarios side-by-side, and export records.",
+    bullets: [
+      {
+        heading: "Audit Trail",
+        body: "Review every barangay and family classification performed during your session, including predicted tier, confidence score, and top decision driver.",
+      },
+      {
+        heading: "Side-by-Side Comparison",
+        body: "Select any two classification profiles to inspect their input indicators and model predictions side-by-side.",
+      },
+      {
+        heading: "CSV Data Export",
+        body: "Download your session classification records as a CSV spreadsheet for offline analysis and reporting.",
       },
     ],
   },

@@ -1233,12 +1233,108 @@ def classify_barangay(req: ClassifyBarangayRequest):
         "Level 3 · High-Income"
     )
 
+    # ── KalingaBot RAG AI Suggestions ────────────────────────────────────────
+    interpretation = None
+    recommendations = []
+
+    if GEMINI_CLIENT:
+        try:
+            top_drivers_str = ", ".join(
+                [f"{f['feature']} ({f['impact']}%)" for f in feature_impacts[:3]]
+            )
+            barangay_str = f"Barangay {req.barangay}" if req.barangay and req.barangay != "Custom" else "a District V community"
+            ai_prompt = f"""You are KalingaBot, a Philippine social welfare AI assistant for Quezon City District V.
+A barangay-level income classification was just completed using a Stacking Ensemble ML model (PSA MPI + FIES indicators).
+
+Barangay: {barangay_str}, Quezon City District V
+Predicted Income Tier: {tier_label} (confidence: {confidence*100:.1f}%)
+
+Community PSA Indicators:
+- Household Head Employment Rate: {req.pct_employed_head:.1f}%
+- Average Monthly Income: PHP {req.avg_monthly_income_php:,.0f}
+- Access to Electricity: {req.pct_with_access_to_electricity:.1f}%
+- Safe Drinking Water Access: {req.pct_with_safe_water_access:.1f}%
+- Sanitary Toilet Coverage: {req.pct_with_sanitary_toilet:.1f}%
+- Youth Net School Enrollment: {req.net_enrollment_rate:.1f}%
+- Permanent Housing Materials: {req.pct_permanent_house_material:.1f}%
+- Informal Settlement Rate: {req.pct_informal_settlers:.1f}%
+- Average Family Size: {req.avg_family_size:.1f} members
+- Secondary Education Completion: {req.pct_completed_secondary_education:.1f}%
+- Top Model Drivers: {top_drivers_str}
+
+Respond ONLY with valid JSON matching this schema exactly:
+{{
+  "interpretation": "2 concise sentences explaining why this barangay was classified into this tier based on their specific indicator numbers. Do not use asterisks or markdown.",
+  "recommendations": [
+    {{
+      "name": "Exact Philippine government program name",
+      "agency": "Lead agency (e.g. DSWD, DOLE, DepEd, DOH, TESDA, QC LGU, NHA)",
+      "sector": "Sector (Livelihood, Education, Housing, Health, Financial Support)",
+      "rationale": "1 sentence citing specific numbers from the indicators above explaining why this program is needed."
+    }}
+  ]
+}}
+Provide 3 tailored recommendations targeting the barangay's weakest indicators."""
+
+            resp = GEMINI_CLIENT.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=ai_prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0.3,
+                    response_mime_type="application/json",
+                ),
+            )
+            ai_data = json.loads(resp.text.strip())
+            interpretation = ai_data.get("interpretation")
+            recommendations = ai_data.get("recommendations", [])
+        except Exception as e:
+            print(f"Warning: KalingaBot barangay suggestions failed: {e}")
+
+    # Fallback static recommendations when Gemini is unavailable
+    if not recommendations:
+        if pred_class == "Low":
+            recommendations = [
+                {"name": "DSWD Pantawid Pamilyang Pilipino Program (4Ps)", "agency": "DSWD", "sector": "Financial Support",
+                 "rationale": f"Conditional cash transfers to address the barangay's low average income of PHP {req.avg_monthly_income_php:,.0f} and support basic household needs."},
+                {"name": "NHA Community Mortgage Program", "agency": "NHA / QC Housing Board", "sector": "Housing",
+                 "rationale": f"Addresses the {req.pct_informal_settlers:.1f}% informal settler rate by providing affordable land tenure and improved housing materials."},
+                {"name": "DSWD Sustainable Livelihood Program (SLP)", "agency": "DSWD / DOLE", "sector": "Livelihood",
+                 "rationale": f"Micro-enterprise grants and skills training to improve the {req.pct_employed_head:.1f}% household employment rate."},
+            ]
+        elif pred_class == "Middle":
+            recommendations = [
+                {"name": "DOLE TUPAD Community Employment Program", "agency": "DOLE", "sector": "Livelihood",
+                 "rationale": f"Short-term wage employment to stabilize the {req.pct_employed_head:.1f}% employment rate and support upward income mobility."},
+                {"name": "TESDA Community-Based Vocational Training", "agency": "TESDA / QC Skills Academy", "sector": "Education",
+                 "rationale": f"Vocational upskilling targeting the {req.pct_completed_secondary_education:.1f}% secondary completion rate to increase earning capacity."},
+                {"name": "DPWH Basic Infrastructure Program", "agency": "DPWH / QC LGU", "sector": "Housing",
+                 "rationale": f"Infrastructure improvements to address {req.pct_informal_settlers:.1f}% informal settlements and upgrade the {req.pct_permanent_house_material:.1f}% permanent housing rate."},
+            ]
+        else:
+            recommendations = [
+                {"name": "QC Small Business \u0026 MSME Development Program", "agency": "QC SBCorp / DTI", "sector": "Livelihood",
+                 "rationale": f"Supports enterprise growth for the self-sufficient barangay to sustain its PHP {req.avg_monthly_income_php:,.0f} average monthly income."},
+                {"name": "DepEd Alternative Learning System (ALS)", "agency": "DepEd / QC Schools Division", "sector": "Education",
+                 "rationale": f"Addresses remaining education gaps with {req.net_enrollment_rate:.1f}% school enrollment to ensure continued human capital development."},
+                {"name": "DOH PhilHealth Konsulta Program", "agency": "DOH / PhilHealth", "sector": "Health",
+                 "rationale": f"Primary health care access to maintain the barangay's stable quality of life indicators."},
+            ]
+
+    if not interpretation:
+        interpretation = (
+            f"With an average monthly income of PHP {req.avg_monthly_income_php:,.0f} and a {req.pct_employed_head:.1f}% "
+            f"household employment rate, the ML model classifies this barangay as {tier_label} at {confidence*100:.1f}% confidence. "
+            f"The {req.pct_informal_settlers:.1f}% informal settlement rate and {req.pct_completed_secondary_education:.1f}% secondary completion rate are key socio-economic indicators."
+        )
+
     return {
         "predicted_class": pred_class,
         "tier_label": tier_label,
         "confidence": confidence,
         "probabilities": prob_dict,
         "feature_impacts": feature_impacts,
+        "interpretation": interpretation,
+        "recommendations": recommendations,
     }
 
 @app.get("/api/geojson/polygons")

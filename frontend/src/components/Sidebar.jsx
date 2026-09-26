@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ScanSearch, Info } from "lucide-react";
+import { ScanSearch, Info, History } from "lucide-react";
 import NavInfoModal from "./NavInfoModal";
 import logo from "../assets/logo.png";
 
@@ -7,7 +7,8 @@ export default function Sidebar({ activeTab, setActiveTab }) {
   const [infoOpen, setInfoOpen] = useState(null); // holds the pageId of the open info modal
 
   const navItems = [
-    { id: "classifier", label: "Classify",  icon: ScanSearch },
+    { id: "classifier", label: "Classify", icon: ScanSearch },
+    { id: "history", label: "History & Compare", icon: History },
   ];
 
   return (
