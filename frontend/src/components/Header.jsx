@@ -8,24 +8,24 @@ export default function Header() {
 
   return (
     <>
-      <header className="h-20 bg-white/70 backdrop-blur-md border-b border-slate-100 px-8 flex items-center justify-between sticky top-0 z-20">
+      <header className="h-20 bg-[#EEF2F6]/85 backdrop-blur-xl border-b border-white/80 shadow-[0_4px_16px_rgba(166,180,200,0.2)] px-8 flex items-center justify-between sticky top-0 z-20">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">
+          <h1 className="text-lg font-semibold tracking-[-0.025em] text-slate-900">
             District V Socio-Economic Income Classification
           </h1>
-          <p className="text-xs text-slate-400 font-medium">
+          <p className="text-[11px] font-mono text-slate-500 tracking-[0.02em]">
             Stacking Ensemble ML Model · Random Forest + Gradient Boosting → Logistic Regression
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          {/* KalingaBot Badge Button */}
+          {/* KalingaBot Badge Button - Neumorphic soft button */}
           <button
             onClick={() => setBotModalOpen(true)}
-            className="flex items-center gap-2 py-1.5 px-3 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100/80 hover:to-purple-100/80 border border-indigo-100/80 rounded-xl transition-all shadow-xs group cursor-pointer"
+            className="flex items-center gap-2.5 py-1.5 px-3.5 neu-btn rounded-xl group cursor-pointer"
             title="Learn about KalingaBot AI"
           >
-            <div className="w-6 h-6 rounded-lg bg-white p-0.5 border border-indigo-100 flex items-center justify-center flex-shrink-0">
+            <div className="w-6 h-6 rounded-lg neu-inset-sm p-0.5 flex items-center justify-center flex-shrink-0">
               <img
                 src={kalingaLogo}
                 alt="KalingaBot AI"
@@ -33,10 +33,10 @@ export default function Header() {
               />
             </div>
             <div className="text-left leading-tight hidden sm:block">
-              <p className="text-[11px] font-bold text-indigo-900 flex items-center gap-1">
+              <p className="text-[11px] font-bold text-indigo-950 flex items-center gap-1">
                 KalingaBot <Sparkles className="w-2.5 h-2.5 text-amber-500 fill-amber-500" />
               </p>
-              <p className="text-[9px] text-indigo-500 font-medium">Who is he?</p>
+              <p className="text-[9px] text-indigo-600 font-medium font-mono">Who is he?</p>
             </div>
           </button>
         </div>

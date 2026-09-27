@@ -1,36 +1,173 @@
+/* ── Fonts: Inter (base) + JetBrains Mono (data / code) ── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
 @import "tailwindcss";
 
+/* ── Custom Easing (Emil Kowalski & Apple Designing Fluid Interfaces WWDC) ── */
 @layer base {
+  :root {
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --neu-bg: #EEF2F6;
+    --neu-light: #FFFFFF;
+    --neu-dark: rgba(166, 180, 200, 0.45);
+    --neu-dark-strong: rgba(145, 160, 185, 0.55);
+  }
+
   body {
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    background-color: #F8FAFC;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: var(--neu-bg);
     color: #0F172A;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
-/* Custom modern scrollbars */
+/* ── Monospace utility for data values ── */
+@layer utilities {
+  .font-mono {
+    font-family: 'JetBrains Mono', ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+  }
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* ── Neumorphic Primitives & Apple Tactile System ── */
+@layer components {
+  /* Raised Neumorphic Surface */
+  .neu-surface {
+    background-color: #EEF2F6;
+    box-shadow: -6px -6px 16px #FFFFFF, 6px 6px 16px rgba(166, 180, 200, 0.42);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+  }
+
+  .neu-surface-sm {
+    background-color: #EEF2F6;
+    box-shadow: -3px -3px 8px #FFFFFF, 3px 3px 8px rgba(166, 180, 200, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+  }
+
+  /* Concave / Debossed Well (Inputs, Slider Tracks, Toggle Bases) */
+  .neu-inset {
+    background-color: #E8EEF5;
+    box-shadow: inset 3px 3px 6px rgba(166, 180, 200, 0.38), inset -3px -3px 6px #FFFFFF;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+  }
+
+  .neu-inset-sm {
+    background-color: #E8EEF5;
+    box-shadow: inset 2px 2px 4px rgba(166, 180, 200, 0.32), inset -2px -2px 4px #FFFFFF;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+
+  /* Tactile Neumorphic Button (Spring feedback: depresses into surface on active) */
+  .neu-btn {
+    background-color: #EEF2F6;
+    box-shadow: -4px -4px 10px #FFFFFF, 4px 4px 10px rgba(166, 180, 200, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    transition: transform 80ms var(--ease-out), box-shadow 80ms var(--ease-out);
+    cursor: pointer;
+  }
+  .neu-btn:hover {
+    box-shadow: -5px -5px 12px #FFFFFF, 5px 5px 12px rgba(166, 180, 200, 0.42);
+  }
+  .neu-btn:active:not(:disabled) {
+    transform: scale(0.97);
+    box-shadow: inset 2px 2px 5px rgba(166, 180, 200, 0.45), inset -2px -2px 5px #FFFFFF;
+  }
+  .neu-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  /* Primary Accent Neumorphic Button (Vibrant Indigo with ambient specular depth) */
+  .neu-btn-primary {
+    background: linear-gradient(135deg, #6366F1, #4F46E5);
+    box-shadow: -3px -3px 8px #FFFFFF, 4px 6px 16px rgba(79, 70, 229, 0.36);
+    border-top: 1px solid rgba(255, 255, 255, 0.35);
+    transition: transform 80ms var(--ease-out), box-shadow 80ms var(--ease-out);
+    cursor: pointer;
+  }
+  .neu-btn-primary:hover:not(:disabled) {
+    box-shadow: -4px -4px 10px #FFFFFF, 5px 8px 20px rgba(79, 70, 229, 0.45);
+  }
+  .neu-btn-primary:active:not(:disabled) {
+    transform: scale(0.97);
+    box-shadow: inset 2px 2px 6px rgba(0, 0, 0, 0.32), inset -1px -1px 3px rgba(255, 255, 255, 0.2);
+  }
+  .neu-btn-primary:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  /* Apple Translucent Neumorphic Glass (Frosted backdrop + dual rim light) */
+  .neu-glass {
+    background: rgba(238, 242, 246, 0.8);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    box-shadow: -8px -8px 22px rgba(255, 255, 255, 0.85), 8px 8px 24px rgba(166, 180, 200, 0.4);
+  }
+
+  /* Apple Direct Response Button Utility */
+  .btn-press {
+    transition: transform 80ms var(--ease-out);
+    cursor: pointer;
+  }
+  .btn-press:active {
+    transform: scale(0.97);
+  }
+  .btn-press:disabled {
+    transform: none;
+  }
+
+  /* Neumorphic Form Input */
+  .neu-input {
+    background-color: #E8EEF5;
+    box-shadow: inset 2px 2px 5px rgba(166, 180, 200, 0.35), inset -2px -2px 5px #FFFFFF;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    transition: box-shadow 120ms var(--ease-out), border-color 120ms var(--ease-out);
+  }
+  .neu-input:focus {
+    outline: none;
+    border-color: #818CF8;
+    box-shadow: inset 2px 2px 5px rgba(129, 140, 248, 0.25), inset -2px -2px 5px #FFFFFF, 0 0 0 3px rgba(99, 102, 241, 0.15);
+  }
+}
+
+/* ── Modern Scrollbars ── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-
 ::-webkit-scrollbar-track {
   background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
   background: #CBD5E1;
   border-radius: 9999px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
   background: #94A3B8;
 }
 
+/* ── Leaflet Map ── */
 .leaflet-container {
   width: 100%;
   height: 100%;
   border-radius: 1rem;
   z-index: 10;
+}
+
+/* ── Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -46,7 +46,7 @@ export default function GeoMap({ barangay, tier }) {
   const tierMeta = TIER_COLORS[tier] || TIER_COLORS["Middle"];
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_2px_10px_rgba(0,0,0,0.03)] overflow-hidden">
+    <div className="neu-surface rounded-3xl overflow-hidden">
       {/* Header */}
       <div className="px-5 pt-4 pb-3 flex items-center justify-between">
         <div>

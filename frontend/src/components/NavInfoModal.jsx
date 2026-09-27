@@ -1,44 +1,43 @@
 import React from "react";
-import { X, ScanSearch, History } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, ScanSearch, History, CheckCircle2 } from "lucide-react";
 
 const PAGE_INFO = {
   classifier: {
     Icon: ScanSearch,
-    color: "bg-indigo-600",
     title: "Classification Center",
-    tagline: "ML-powered income level classification.",
+    tagline: "Stacking Ensemble Income Tier Inference",
     bullets: [
       {
-        heading: "Barangay Classifier (Primary)",
-        body: "Enter a barangay's population, 4Ps density, school attendance, and family metrics to classify its overall income level into Level 1 (Survival), Level 2 (Subsistence), or Level 3 (Self-Sufficient). Use the quick-fill presets for any of the 14 District V barangays.",
+        heading: "Barangay Classifier (Community Scale)",
+        body: "Analyzes 10 key PSA indicators (economic, utilities, human capital) to assign a community to Level 1 (Low), Level 2 (Middle), or Level 3 (High).",
       },
       {
-        heading: "Individual Family Classifier (Sub-toggle)",
-        body: "Switch to the Individual Family mode to classify a single household using its total monthly income, family size, number of dependents, and children attending school.",
+        heading: "Individual Family Classifier (Household Scale)",
+        body: "Evaluates single-household indicators (per-capita income, dependents, education participation, 4Ps status) against DSWD SWDI thresholds.",
       },
       {
-        heading: "What the results show",
-        body: "Each classification result shows the predicted SWDI income level, the model's confidence percentage, and the top socio-economic factors that most influenced the prediction — ranked by decision impact.",
+        heading: "Model Explainability & Decision Drivers",
+        body: "Visualizes the model's softmax probability distribution alongside localized feature importances indicating the primary drivers of welfare classification.",
       },
     ],
   },
   history: {
     Icon: History,
-    color: "bg-indigo-600",
-    title: "Classification History & Comparison",
-    tagline: "Audit past predictions, compare scenarios side-by-side, and export records.",
+    title: "Classification Audit Trail & Ledger",
+    tagline: "Forensic Audit Log & Dual Comparative Analysis",
     bullets: [
       {
-        heading: "Audit Trail",
-        body: "Review every barangay and family classification performed during your session, including predicted tier, confidence score, and top decision driver.",
+        heading: "Immutable Forensic Ledger",
+        body: "Chronologically logs each inference with ordinal numbering, microsecond timestamps, predicted tiers, and dominant socio-economic drivers.",
       },
       {
-        heading: "Side-by-Side Comparison",
-        body: "Select any two classification profiles to inspect their input indicators and model predictions side-by-side.",
+        heading: "Side-by-Side Dual Analysis",
+        body: "Select any two classification profiles to trigger the side-by-side modal with delta matrices, radar charts, and policy intervention mappings.",
       },
       {
-        heading: "CSV Data Export",
-        body: "Download your session classification records as a CSV spreadsheet for offline analysis and reporting.",
+        heading: "Analytical CSV Export",
+        body: "Export all session records into a standard spreadsheet format for statistical verification and reporting.",
       },
     ],
   },
@@ -47,62 +46,67 @@ const PAGE_INFO = {
 export default function NavInfoModal({ pageId, onClose }) {
   const info = PAGE_INFO[pageId];
   if (!info) return null;
-  const { Icon, color, title, tagline, bullets } = info;
+  const { Icon, title, tagline, bullets } = info;
 
   return (
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
+    <AnimatePresence>
       <div
-        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
+        className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md"
+        onClick={onClose}
       >
-        {/* Colored header */}
-        <div className={`${color} px-6 py-5`}>
-          <div className="flex items-start justify-between">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.96 }}
+          transition={{ type: "spring", duration: 0.35, bounce: 0.1 }}
+          className="neu-glass rounded-3xl w-full max-w-md overflow-hidden border border-white/90 shadow-[0_25px_60px_-15px_rgba(15,23,42,0.3),-8px_-8px_20px_#FFFFFF]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="p-6 bg-[#EEF2F6]/70 border-b border-white/80 flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                <Icon className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 rounded-2xl neu-surface-sm flex items-center justify-center text-indigo-600">
+                <Icon className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-base font-extrabold text-white leading-tight">{title}</h2>
-                <p className="text-white/70 text-xs font-medium mt-0.5">{tagline}</p>
+                <h2 className="text-base font-bold text-slate-900 leading-tight">{title}</h2>
+                <p className="text-[11px] font-mono text-slate-500 mt-0.5">{tagline}</p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer"
+              className="w-8 h-8 rounded-xl neu-btn text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
-        </div>
 
-        {/* Bullet sections */}
-        <div className="px-6 py-5 space-y-4">
-          {bullets.map((b, i) => (
-            <div key={i}>
-              <p className="text-xs font-bold text-slate-900 mb-1">{b.heading}</p>
-              <p className="text-xs text-slate-500 leading-relaxed">{b.body}</p>
-              {i < bullets.length - 1 && (
-                <div className="border-b border-slate-100 mt-4" />
-              )}
-            </div>
-          ))}
-        </div>
+          {/* Bullet sections */}
+          <div className="p-6 space-y-3.5 bg-[#EEF2F6]">
+            {bullets.map((b, i) => (
+              <div key={i} className="neu-surface-sm p-3.5 rounded-2xl space-y-1">
+                <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600 flex-shrink-0" />
+                  <span>{b.heading}</span>
+                </p>
+                <p className="text-[11px] text-slate-600 leading-relaxed pl-5 font-normal">
+                  {b.body}
+                </p>
+              </div>
+            ))}
+          </div>
 
-        {/* Footer */}
-        <div className="px-6 pb-5">
-          <button
-            onClick={onClose}
-            className={`w-full py-2.5 ${color} hover:opacity-90 text-white font-semibold text-sm rounded-xl transition-all cursor-pointer`}
-          >
-            Got it!
-          </button>
-        </div>
+          {/* Footer */}
+          <div className="px-6 pb-6 pt-2 bg-[#EEF2F6]">
+            <button
+              onClick={onClose}
+              className="w-full py-2.5 neu-btn text-slate-900 font-semibold text-xs rounded-xl cursor-pointer"
+            >
+              Understand & Continue
+            </button>
+          </div>
+        </motion.div>
       </div>
-    </div>
+    </AnimatePresence>
   );
 }
