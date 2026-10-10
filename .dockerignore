@@ -1,0 +1,32 @@
+# Don't copy node_modules or frontend build tools into the Docker image
+frontend/node_modules
+frontend/dist
+frontend/.gitignore
+
+# Python cache
+__pycache__
+*.pyc
+*.pyo
+api/__pycache__
+
+# Local env (secrets go via Render env vars)
+.env
+.env.local
+
+# Git metadata
+.git
+.gitignore
+
+# Dev tools
+.vscode
+scratch
+*.bat
+
+# Large training data files (only needed for model building, not serving)
+data/DISTRICT V_INCOME.xlsx
+data/DISTRICT V_INCOME_I_dataset.csv
+
+# Training scripts
+build_stacking_model.py
+train_barangay_model.py
+train_individual_model.py
