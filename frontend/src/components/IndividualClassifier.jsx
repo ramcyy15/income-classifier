@@ -8,6 +8,7 @@ import PredictionCard from "./PredictionCard";
 import FeatureDrivers from "./FeatureDrivers";
 import AISuggestions from "./AISuggestions";
 import { saveClassificationRecord } from "../utils/historyStore";
+import { classifyIndividual } from "../services/api";
 
 const DISTRICT_V_BARANGAYS = [
   "Bagbag", "Capri", "Fairview", "Greater Lagro", "Gulod", "Kaligayahan",
@@ -70,21 +71,14 @@ export default function IndividualClassifier() {
 
     try {
       const familySize = Math.max(Number(form.family_size), 1);
-      const res = await fetch("http://localhost:8000/api/classify-individual", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          barangay: form.barangay,
-          total_monthly_income: Number(form.total_monthly_income),
-          family_size: familySize,
-          dependents_0_18: Number(form.dependents_0_18),
-          children_in_school: Number(form.children_in_school),
-          household_status: form.household_status,
-        }),
+      const data = await classifyIndividual({
+        barangay: form.barangay,
+        total_monthly_income: Number(form.total_monthly_income),
+        family_size: familySize,
+        dependents_0_18: Number(form.dependents_0_18),
+        children_in_school: Number(form.children_in_school),
+        household_status: form.household_status,
       });
-
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
       setResult(data);
 
       try {

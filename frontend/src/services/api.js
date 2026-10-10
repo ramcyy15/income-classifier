@@ -60,3 +60,24 @@ export async function generateLivePolicyBrief(barangayName) {
   }
   return res.json();
 }
+
+export async function classifyIndividual(payload) {
+  const res = await fetch(`${API_BASE}/classify-individual`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function classifyBarangay(payload) {
+  const res = await fetch(`${API_BASE}/classify-barangay`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+

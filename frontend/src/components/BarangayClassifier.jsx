@@ -10,6 +10,7 @@ import PredictionCard from "./PredictionCard";
 import FeatureDrivers from "./FeatureDrivers";
 import AISuggestions from "./AISuggestions";
 import { saveClassificationRecord } from "../utils/historyStore";
+import { classifyBarangay } from "../services/api";
 
 const DISTRICT_V_BARANGAYS = [
   "Bagbag", "Capri", "Fairview", "Greater Lagro", "Gulod", "Kaligayahan",
@@ -157,26 +158,19 @@ export default function BarangayClassifier() {
     setResult(null);
 
     try {
-      const res = await fetch("http://localhost:8000/api/classify-barangay", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          barangay: form.barangay,
-          pct_employed_head: Number(form.pctEmployedHead),
-          avg_monthly_income_php: Number(form.avgMonthlyIncomePhp),
-          pct_with_access_to_electricity: Number(form.pctWithAccessToElectricity),
-          pct_with_safe_water_access: Number(form.pctWithSafeWaterAccess),
-          pct_with_sanitary_toilet: Number(form.pctWithSanitaryToilet),
-          net_enrollment_rate: Number(form.netEnrollmentRate),
-          pct_permanent_house_material: Number(form.pctPermanentHouseMaterial),
-          pct_informal_settlers: Number(form.pctInformalSettlers),
-          avg_family_size: Number(form.avgFamilySize),
-          pct_completed_secondary_education: Number(form.pctCompletedSecondaryEducation),
-        }),
+      const data = await classifyBarangay({
+        barangay: form.barangay,
+        pct_employed_head: Number(form.pctEmployedHead),
+        avg_monthly_income_php: Number(form.avgMonthlyIncomePhp),
+        pct_with_access_to_electricity: Number(form.pctWithAccessToElectricity),
+        pct_with_safe_water_access: Number(form.pctWithSafeWaterAccess),
+        pct_with_sanitary_toilet: Number(form.pctWithSanitaryToilet),
+        net_enrollment_rate: Number(form.netEnrollmentRate),
+        pct_permanent_house_material: Number(form.pctPermanentHouseMaterial),
+        pct_informal_settlers: Number(form.pctInformalSettlers),
+        avg_family_size: Number(form.avgFamilySize),
+        pct_completed_secondary_education: Number(form.pctCompletedSecondaryEducation),
       });
-
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
       setResult(data);
 
       try {
