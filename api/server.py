@@ -6,8 +6,9 @@ from typing import Dict, Any, List, Optional
 import joblib
 import numpy as np
 import pandas as pd
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from google import genai
 from google.genai import types
@@ -142,13 +143,32 @@ FEATURE_LABELS = {
 
 app = FastAPI(title="District V Income Classifier API", version="2.0.0")
 
+# CORS — allow_credentials + wildcard origin is invalid per spec; use explicit origins.
+# We allow all origins with the wildcard but WITHOUT credentials to keep it simple.
+ALLOW_ORIGINS = [
+    "https://income-classifier.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:3000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=ALLOW_ORIGINS,
+    allow_origin_regex=r"https://.*\.vercel\.app",  # allow all Vercel preview URLs
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Global exception handler — ensures CORS headers are present even on 500 errors
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    origin = request.headers.get("origin", "")
+    headers = {"Access-Control-Allow-Origin": origin or "*"}
+    if isinstance(exc, HTTPException):
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail}, headers=headers)
+    return JSONResponse(status_code=500, content={"detail": str(exc)}, headers=headers)
+
 
 # Global caches
 _CACHE = {}
