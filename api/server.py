@@ -1,6 +1,7 @@
 import json
 import os
 import time
+import threading
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 import joblib
@@ -196,6 +197,29 @@ def get_barangay_model():
         else:
             _CACHE["barangay_model"] = None
     return _CACHE["barangay_model"]
+
+def _warmup_models_background():
+    try:
+        get_barangay_model()
+        get_individual_model()
+    except Exception:
+        pass
+
+@app.get("/api/health")
+@app.get("/health")
+def health():
+    if "barangay_model" not in _CACHE:
+        threading.Thread(target=_warmup_models_background, daemon=True).start()
+    return {
+        "status": "online",
+        "service": "District V Socio-Economic Income Classifier API",
+        "timestamp": time.time(),
+        "cached": {
+            "barangay_model": "barangay_model" in _CACHE,
+            "individual_model": "individual_model" in _CACHE,
+            "ensemble_model": "model" in _CACHE,
+        }
+    }
 
 def get_metrics():
     accuracy = 0.4994

@@ -6,102 +6,79 @@ import logo from "../assets/logo.png";
 
 const navItems = [
   { id: "classifier", label: "Classify", icon: ScanSearch },
-  { id: "history",    label: "History & Compare", icon: History },
+  { id: "history", label: "History & Compare", icon: History },
 ];
 
-const spring = { type: "spring", duration: 0.35, bounce: 0.12 };
+// Emil: spring config for layout morph
+const indicatorSpring = { type: "spring", duration: 0.4, bounce: 0.15 };
 
 export default function Sidebar({ activeTab, setActiveTab }) {
   const [infoOpen, setInfoOpen] = useState(null);
 
   return (
     <>
-      <aside
-        className="w-[68px] flex flex-col items-center py-5 justify-between select-none z-30 flex-shrink-0"
-        style={{
-          background: 'rgba(8,13,20,0.96)',
-          borderRight: '1px solid rgba(255,255,255,0.06)',
-          boxShadow: '4px 0 24px rgba(0,0,0,0.4)',
-        }}
-      >
-        <div className="flex flex-col items-center gap-7 w-full">
-          {/* Logo */}
+      <aside className="w-20 bg-[#EEF2F6] border-r border-white/80 flex flex-col items-center py-6 justify-between select-none shadow-[4px_0_18px_rgba(166,180,200,0.22)] z-30">
+        <div className="flex flex-col items-center gap-8 w-full">
+          {/* Logo emblem */}
           <button
             onClick={() => setActiveTab("classifier")}
             title="District V Income Intelligence"
-            className="w-10 h-10 rounded-xl flex items-center justify-center btn-press"
-            style={{
-              background: 'rgba(59,130,246,0.1)',
-              border: '1px solid rgba(59,130,246,0.2)',
-            }}
+            className="w-12 h-12 rounded-2xl neu-btn flex items-center justify-center cursor-pointer"
           >
             <img
               src={logo}
-              alt="District V"
-              className="w-7 h-7 object-contain"
+              alt="District V Income Intelligence"
+              className="w-9 h-9 object-contain"
             />
           </button>
 
-          {/* Divider */}
-          <div className="w-8 h-px" style={{ background: 'rgba(255,255,255,0.06)' }} />
-
-          {/* Nav */}
-          <nav className="flex flex-col items-center gap-2 w-full px-2">
+          {/* Nav items */}
+          <nav className="flex flex-col items-center gap-3 w-full px-2">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
 
               return (
-                <div key={item.id} className="relative w-full flex flex-col items-center group">
+                <div
+                  key={item.id}
+                  className="relative w-full flex flex-col items-center group"
+                >
+                  {/* Main nav button */}
                   <button
                     onClick={() => setActiveTab(item.id)}
                     title={item.label}
-                    className="relative w-11 h-11 rounded-xl flex items-center justify-center transition-colors duration-150 cursor-pointer"
-                    style={{
-                      background: isActive
-                        ? 'rgba(59,130,246,0.15)'
-                        : 'transparent',
-                      border: isActive
-                        ? '1px solid rgba(59,130,246,0.3)'
-                        : '1px solid transparent',
-                      color: isActive ? '#60a5fa' : '#484f58',
-                    }}
+                    className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-150 relative ${
+                      isActive
+                        ? "bg-slate-900 text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),0_6px_16px_rgba(15,23,42,0.35)]"
+                        : "neu-btn text-slate-500 hover:text-slate-800"
+                    }`}
                   >
-                    <Icon className="w-[18px] h-[18px]" strokeWidth={isActive ? 2 : 1.75} />
+                    <Icon className="w-5 h-5" />
 
-                    {/* Active left indicator — layout morph */}
+                    {/* Active indicator — layoutId morph */}
                     {isActive && (
                       <motion.span
-                        layoutId="sidebar-active"
-                        className="absolute -left-[9px] w-[3px] h-5 rounded-r-full"
-                        style={{ background: '#3b82f6' }}
-                        transition={spring}
+                        layoutId="sidebar-active-indicator"
+                        className="absolute -left-2 w-1.5 h-6 bg-indigo-600 rounded-r-full shadow-sm"
+                        transition={indicatorSpring}
                       />
                     )}
                   </button>
 
-                  {/* Hover info button */}
+                  {/* Info button — appears on hover */}
                   <button
-                    onClick={(e) => { e.stopPropagation(); setInfoOpen(item.id); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setInfoOpen(item.id);
+                    }}
                     title={`About ${item.label}`}
-                    className="w-4 h-4 rounded-full flex items-center justify-center transition-colors cursor-pointer opacity-0 group-hover:opacity-100 mt-0.5"
-                    style={{ color: '#484f58' }}
+                    className="w-5 h-5 rounded-full neu-inset-sm text-slate-400 hover:text-indigo-600 flex items-center justify-center transition-colors cursor-pointer opacity-0 group-hover:opacity-100 mt-1"
                   >
                     <Info className="w-3 h-3" />
                   </button>
 
-                  {/* Tooltip */}
-                  <span
-                    className="absolute left-14 px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50"
-                    style={{
-                      background: '#111d2e',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      color: '#e6edf3',
-                      boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                    }}
-                  >
+                  {/* Tooltip label */}
+                  <span className="absolute left-16 bg-slate-900 text-white text-xs font-semibold px-2.5 py-1 rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl z-50 top-1">
                     {item.label}
                   </span>
                 </div>
@@ -111,18 +88,14 @@ export default function Sidebar({ activeTab, setActiveTab }) {
         </div>
 
         {/* Bottom district badge */}
-        <div
-          className="w-9 h-9 rounded-xl flex items-center justify-center font-mono font-bold text-[10px]"
-          style={{
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.06)',
-            color: '#484f58',
-          }}
-        >
-          QC5
+        <div className="flex flex-col items-center gap-4 w-full px-3">
+          <div className="w-10 h-10 rounded-xl neu-inset-sm flex items-center justify-center font-mono font-bold text-[11px] text-slate-600 select-none">
+            QC5
+          </div>
         </div>
       </aside>
 
+      {/* Info Modal */}
       {infoOpen && (
         <NavInfoModal pageId={infoOpen} onClose={() => setInfoOpen(null)} />
       )}

@@ -4,6 +4,12 @@ const API_BASE = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api`
   : '/api';
 
+export async function checkServerHealth() {
+  const res = await fetch(`${API_BASE}/health`, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`Health check failed (${res.status})`);
+  return res.json();
+}
+
 export async function fetchOverview() {
   const res = await fetch(`${API_BASE}/overview`);
   if (!res.ok) throw new Error('Failed to load overview data');

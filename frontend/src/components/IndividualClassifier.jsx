@@ -9,6 +9,7 @@ import FeatureDrivers from "./FeatureDrivers";
 import AISuggestions from "./AISuggestions";
 import { saveClassificationRecord } from "../utils/historyStore";
 import { classifyIndividual } from "../services/api";
+import { useServerHealth } from "../context/ServerHealthContext";
 
 const DISTRICT_V_BARANGAYS = [
   "Bagbag", "Capri", "Fairview", "Greater Lagro", "Gulod", "Kaligayahan",
@@ -56,6 +57,9 @@ export default function IndividualClassifier() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [hoveredField, setHoveredField] = useState(null);
+  const [requestSeconds, setRequestSeconds] = useState(0);
+
+  const { status: serverStatus, secondsElapsed: serverSeconds } = useServerHealth();
 
   const handleChange = (id, val) => setForm((f) => ({ ...f, [id]: val }));
 
@@ -68,6 +72,12 @@ export default function IndividualClassifier() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setRequestSeconds(0);
+
+    const startReqTime = Date.now();
+    const reqTimer = setInterval(() => {
+      setRequestSeconds(Math.floor((Date.now() - startReqTime) / 1000));
+    }, 500);
 
     try {
       const familySize = Math.max(Number(form.family_size), 1);
@@ -107,6 +117,7 @@ export default function IndividualClassifier() {
     } catch (e) {
       setError(e.message || "Server error. Make sure the API is running.");
     } finally {
+      clearInterval(reqTimer);
       setLoading(false);
     }
   };
@@ -121,18 +132,18 @@ export default function IndividualClassifier() {
     <div className="space-y-5">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
         {/* LEFT PANEL: Household Profile Form */}
-        <div className="surface-card rounded-2xl p-6 space-y-4 flex flex-col justify-between">
+        <div className="neu-surface rounded-3xl p-6 space-y-4 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-1.5">
-                <Sliders className="w-4 h-4 text-blue-400" />
-                <span className="text-[13px] font-semibold tracking-[-0.01em] text-[#e6edf3]">
+                <Sliders className="w-4 h-4 text-indigo-600" />
+                <span className="text-[13px] font-semibold tracking-[-0.01em] text-slate-800">
                   Household Socio-Economic Profile
                 </span>
               </div>
               <button
                 onClick={handleReset}
-                className="flex items-center gap-1 text-[10px] font-medium text-[#8b949e] hover:text-rose-400 transition-colors cursor-pointer"
+                className="flex items-center gap-1 text-[10px] font-medium text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
               >
                 <RotateCcw className="w-3 h-3" /> Reset
               </button>
@@ -141,17 +152,17 @@ export default function IndividualClassifier() {
             <div className="space-y-4">
               {/* Barangay Location Dropdown */}
               <div>
-                <label className="text-[11px] font-medium text-[#8b949e] mb-1.5 flex items-center justify-between">
+                <label className="block text-[11px] font-medium text-slate-500 mb-1 flex items-center justify-between">
                   <span>RESIDENTIAL BARANGAY LOCATION</span>
-                  <span className="text-[9.5px] text-[#484f58] font-normal">District V Catchment</span>
+                  <span className="text-[9.5px] text-slate-400 font-normal">District V Catchment</span>
                 </label>
                 <select
                   value={form.barangay}
                   onChange={(e) => handleChange("barangay", e.target.value)}
-                  className="w-full form-input rounded-xl px-3.5 py-2.5 text-xs font-semibold cursor-pointer"
+                  className="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-800 neu-input rounded-xl cursor-pointer"
                 >
                   {DISTRICT_V_BARANGAYS.map((b) => (
-                    <option key={b} value={b} className="bg-[#0d1520] text-[#e6edf3]">{b}</option>
+                    <option key={b} value={b}>{b}</option>
                   ))}
                 </select>
               </div>
@@ -162,12 +173,12 @@ export default function IndividualClassifier() {
                 onMouseEnter={() => setHoveredField("total_monthly_income")}
                 onMouseLeave={() => setHoveredField(null)}
               >
-                <label className="text-[11px] font-medium text-[#8b949e] mb-1.5 flex items-center justify-between">
+                <label className="block text-[11px] font-medium text-slate-600 mb-1 flex items-center justify-between">
                   <span>Monthly Per-Capita Income</span>
-                  <span className="text-[9.5px] font-mono text-blue-400 font-semibold">CORE BASELINE</span>
+                  <span className="text-[9.5px] font-mono text-indigo-600 font-semibold">CORE BASELINE</span>
                 </label>
-                <div className="relative flex items-center rounded-xl surface-inset border-l-4 border-l-blue-500 overflow-hidden">
-                  <span className="pl-3.5 text-blue-400 font-bold text-sm">₱</span>
+                <div className="relative flex items-center rounded-xl neu-inset border-l-4 border-l-indigo-600 overflow-hidden">
+                  <span className="pl-3.5 text-indigo-600 font-bold text-sm">₱</span>
                   <input
                     type="number"
                     min={0}
@@ -176,11 +187,11 @@ export default function IndividualClassifier() {
                     placeholder="15,000"
                     value={form.total_monthly_income}
                     onChange={(e) => handleChange("total_monthly_income", e.target.value)}
-                    className="w-full px-2.5 py-2.5 text-sm font-semibold font-mono tabular-nums text-[#e6edf3] bg-transparent focus:outline-none placeholder:text-[#484f58]"
+                    className="w-full px-2.5 py-2.5 text-sm font-semibold font-mono tabular-nums text-slate-900 bg-transparent focus:outline-none placeholder:text-slate-400"
                   />
                 </div>
                 {hoveredField === "total_monthly_income" && (
-                  <div className="absolute left-0 -top-8 z-30 bg-[#0d1520] border border-white/10 text-[#e6edf3] text-[10px] px-2.5 py-1.5 rounded-lg shadow-xl pointer-events-none">
+                  <div className="absolute left-0 -top-8 z-30 bg-slate-900 text-white text-[10px] px-2.5 py-1.5 rounded-lg shadow-xl pointer-events-none">
                     Total combined income of all household earners per month.
                   </div>
                 )}
@@ -188,8 +199,8 @@ export default function IndividualClassifier() {
 
               {/* Family Demographics Cluster */}
               <div className="space-y-2">
-                <div className="border-l-2 border-white/15 pl-2">
-                  <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-[#8b949e] block font-semibold">
+                <div className="border-l-2 border-slate-300 pl-2">
+                  <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-slate-400 block font-semibold">
                     HOUSEHOLD COMPOSITION & VULNERABILITY
                   </span>
                 </div>
@@ -201,7 +212,7 @@ export default function IndividualClassifier() {
                     onMouseEnter={() => setHoveredField("family_size")}
                     onMouseLeave={() => setHoveredField(null)}
                   >
-                    <label className="block text-[10px] font-medium text-[#8b949e] truncate mb-1">
+                    <label className="block text-[10px] font-medium text-slate-600 truncate mb-1">
                       Family Size
                     </label>
                     <input
@@ -212,10 +223,10 @@ export default function IndividualClassifier() {
                       placeholder="5"
                       value={form.family_size}
                       onChange={(e) => handleChange("family_size", e.target.value)}
-                      className="w-full form-input rounded-xl px-2.5 py-2 text-xs font-mono tabular-nums font-medium"
+                      className="w-full px-2.5 py-2 text-xs font-mono tabular-nums font-medium text-slate-800 neu-input rounded-xl"
                     />
                     {hoveredField === "family_size" && (
-                      <div className="absolute left-0 -top-8 z-30 bg-[#0d1520] border border-white/10 text-[#e6edf3] text-[10px] px-2 py-1 rounded-md shadow-xl whitespace-nowrap pointer-events-none">
+                      <div className="absolute left-0 -top-8 z-30 bg-slate-900 text-white text-[10px] px-2 py-1 rounded-md shadow-xl whitespace-nowrap pointer-events-none">
                         Total living members
                       </div>
                     )}
@@ -227,7 +238,7 @@ export default function IndividualClassifier() {
                     onMouseEnter={() => setHoveredField("dependents_0_18")}
                     onMouseLeave={() => setHoveredField(null)}
                   >
-                    <label className="block text-[10px] font-medium text-[#8b949e] truncate mb-1">
+                    <label className="block text-[10px] font-medium text-slate-600 truncate mb-1">
                       Minors (&lt; 18)
                     </label>
                     <input
@@ -238,10 +249,10 @@ export default function IndividualClassifier() {
                       placeholder="3"
                       value={form.dependents_0_18}
                       onChange={(e) => handleChange("dependents_0_18", e.target.value)}
-                      className="w-full form-input rounded-xl px-2.5 py-2 text-xs font-mono tabular-nums font-medium"
+                      className="w-full px-2.5 py-2 text-xs font-mono tabular-nums font-medium text-slate-800 neu-input rounded-xl"
                     />
                     {hoveredField === "dependents_0_18" && (
-                      <div className="absolute left-0 -top-8 z-30 bg-[#0d1520] border border-white/10 text-[#e6edf3] text-[10px] px-2 py-1 rounded-md shadow-xl whitespace-nowrap pointer-events-none">
+                      <div className="absolute left-0 -top-8 z-30 bg-slate-900 text-white text-[10px] px-2 py-1 rounded-md shadow-xl whitespace-nowrap pointer-events-none">
                         Children aged 0-18
                       </div>
                     )}
@@ -253,7 +264,7 @@ export default function IndividualClassifier() {
                     onMouseEnter={() => setHoveredField("children_in_school")}
                     onMouseLeave={() => setHoveredField(null)}
                   >
-                    <label className="block text-[10px] font-medium text-[#8b949e] truncate mb-1">
+                    <label className="block text-[10px] font-medium text-slate-600 truncate mb-1">
                       In School
                     </label>
                     <input
@@ -264,10 +275,10 @@ export default function IndividualClassifier() {
                       placeholder="2"
                       value={form.children_in_school}
                       onChange={(e) => handleChange("children_in_school", e.target.value)}
-                      className="w-full form-input rounded-xl px-2.5 py-2 text-xs font-mono tabular-nums font-medium"
+                      className="w-full px-2.5 py-2 text-xs font-mono tabular-nums font-medium text-slate-800 neu-input rounded-xl"
                     />
                     {hoveredField === "children_in_school" && (
-                      <div className="absolute right-0 -top-8 z-30 bg-[#0d1520] border border-white/10 text-[#e6edf3] text-[10px] px-2 py-1 rounded-md shadow-xl whitespace-nowrap pointer-events-none">
+                      <div className="absolute right-0 -top-8 z-30 bg-slate-900 text-white text-[10px] px-2 py-1 rounded-md shadow-xl whitespace-nowrap pointer-events-none">
                         Currently enrolled youth
                       </div>
                     )}
@@ -277,11 +288,11 @@ export default function IndividualClassifier() {
 
               {/* 4Ps Household Status Pill Selector */}
               <div>
-                <label className="text-[11px] font-medium text-[#8b949e] mb-1.5 flex items-center justify-between">
+                <label className="block text-[11px] font-medium text-slate-600 mb-1.5 flex items-center justify-between">
                   <span>Pantawid Pamilyang Pilipino Program (4Ps) Status</span>
-                  <span className="text-[9.5px] text-[#484f58] font-normal">DSWD Beneficiary Registry</span>
+                  <span className="text-[9.5px] text-slate-400 font-normal">DSWD Beneficiary Registry</span>
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 surface-inset p-1.5 rounded-xl border border-white/5">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 neu-inset p-1.5 rounded-xl">
                   {FOUR_PS_STATUS_OPTIONS.map((status) => {
                     const isSelected = form.household_status === status;
                     return (
@@ -291,8 +302,8 @@ export default function IndividualClassifier() {
                         onClick={() => handleChange("household_status", status)}
                         className={`text-[11px] py-1.5 px-2 rounded-lg transition-all cursor-pointer text-center ${
                           isSelected
-                            ? "bg-blue-600/20 border border-blue-500/30 text-blue-400 font-bold shadow-xs"
-                            : "text-[#8b949e] hover:text-[#e6edf3] font-medium"
+                            ? "neu-surface-sm text-slate-900 font-bold"
+                            : "text-slate-500 hover:text-slate-800 font-medium"
                         }`}
                       >
                         {status}
@@ -308,12 +319,16 @@ export default function IndividualClassifier() {
             <button
               onClick={handleSubmit}
               disabled={!isFormValid || loading}
-              className="btn-primary w-full py-3.5 rounded-xl font-semibold text-[13px] flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3.5 rounded-2xl text-white font-semibold text-[13px] flex items-center justify-center gap-2 neu-btn-primary"
             >
               {loading ? (
                 <>
                   <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Computing SWDI Tier…</span>
+                  <span>
+                    {serverStatus === "waking" || requestSeconds >= 2
+                      ? `Waking Server (${requestSeconds || serverSeconds}s)…`
+                      : "Computing SWDI Tier…"}
+                  </span>
                 </>
               ) : (
                 <>
@@ -323,14 +338,20 @@ export default function IndividualClassifier() {
               )}
             </button>
 
+            {loading && (serverStatus === "waking" || requestSeconds >= 2) && (
+              <p className="text-center text-[10.5px] text-amber-700 bg-amber-500/10 border border-amber-300/60 rounded-xl py-1.5 px-3 mt-2 font-medium">
+                ⏳ First request wakes the Render cloud container (~30s). Please keep this page open.
+              </p>
+            )}
+
             {!isFormValid && !loading && (
-              <p className="text-center text-[10px] text-[#8b949e] flex items-center justify-center gap-1 mt-2 font-mono">
+              <p className="text-center text-[10px] text-slate-400 flex items-center justify-center gap-1 mt-2 font-mono">
                 <AlertCircle className="w-3 h-3" /> Complete all fields to evaluate the household income profile.
               </p>
             )}
 
             {error && (
-              <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-xl p-3 text-[11px] font-medium mt-2">
+              <div className="bg-red-500/10 border border-red-300 text-red-700 rounded-2xl p-3 text-[11px] font-medium mt-2">
                 {error}
               </div>
             )}
@@ -338,13 +359,41 @@ export default function IndividualClassifier() {
         </div>
 
         {/* RIGHT PANEL: Results Panel */}
-        <div className="h-[580px] overflow-y-auto pr-1 space-y-4 rounded-2xl scrollbar-thin">
+        <div className="h-[580px] overflow-y-auto pr-1 space-y-4 rounded-3xl scrollbar-thin scrollbar-thumb-slate-300">
+          {loading && (
+            <div className="h-full neu-surface rounded-3xl flex flex-col items-center justify-center text-center p-8 border border-white/80">
+              <motion.div
+                animate={{ scale: [1, 1.05, 1], rotate: [0, 180, 360] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                className="w-16 h-16 mb-4 flex items-center justify-center p-3 neu-inset-sm rounded-2xl text-indigo-600"
+              >
+                <RotateCcw className="w-8 h-8 animate-spin text-indigo-600" />
+              </motion.div>
+              <h3 className="text-sm font-bold text-slate-800">
+                {serverStatus === "waking" || requestSeconds >= 2
+                  ? "Waking Cloud Backend Instance"
+                  : "Evaluating Household SWDI Tier"}
+              </h3>
+              <p className="text-xs font-mono text-indigo-600 font-semibold mt-1">
+                {requestSeconds > 0 ? `${requestSeconds}s elapsed` : "Running decision pipeline…"}
+              </p>
+              <p className="text-[11px] text-slate-500 mt-2 max-w-[280px] leading-relaxed">
+                {serverStatus === "waking" || requestSeconds >= 2
+                  ? "Render free-tier instances hibernate after 15 min. Loading Python runtime & household model into RAM (~30s)."
+                  : "Computing per-capita subsistence metrics and evaluating multidimensional poverty indicators."}
+              </p>
+              <div className="w-48 h-1.5 rounded-full neu-inset overflow-hidden mt-4">
+                <div className="h-full bg-gradient-to-r from-indigo-500 to-amber-500 rounded-full animate-pulse w-3/4" />
+              </div>
+            </div>
+          )}
+
           {!result && !loading && (
-            <div className="h-full surface-card rounded-2xl flex flex-col items-center justify-center text-center p-10 border border-white/5">
+            <div className="h-full neu-surface rounded-3xl flex flex-col items-center justify-center text-center p-10">
               <motion.div
                 animate={{ y: [0, -6, 0] }}
                 transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                className="w-16 h-16 mb-3 flex items-center justify-center p-2 surface-inset rounded-2xl border border-white/5"
+                className="w-16 h-16 mb-3 flex items-center justify-center p-2 neu-inset-sm rounded-2xl"
               >
                 <img
                   src={kalingaLogo}
@@ -352,8 +401,8 @@ export default function IndividualClassifier() {
                   className="w-full h-full object-contain"
                 />
               </motion.div>
-              <p className="text-sm font-semibold text-[#e6edf3]">Ready to Classify</p>
-              <p className="text-[11px] text-[#8b949e] mt-1 max-w-[250px] leading-relaxed font-normal">
+              <p className="text-sm font-semibold text-slate-700">Ready to Classify</p>
+              <p className="text-[11px] text-slate-400 mt-1 max-w-[250px] leading-relaxed font-normal">
                 Provide household indicators on the left and run inference to view SWDI welfare predictions, confidence levels, and intervention opportunities.
               </p>
             </div>

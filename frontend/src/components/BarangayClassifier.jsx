@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Sliders, RotateCcw, AlertCircle, Eye, EyeOff, Info,
   DollarSign, Users, Home, Sparkles, TrendingUp, CheckCircle2, GraduationCap, Baby
@@ -11,6 +11,7 @@ import FeatureDrivers from "./FeatureDrivers";
 import AISuggestions from "./AISuggestions";
 import { saveClassificationRecord } from "../utils/historyStore";
 import { classifyBarangay } from "../services/api";
+import { useServerHealth } from "../context/ServerHealthContext";
 
 const DISTRICT_V_BARANGAYS = [
   "Bagbag", "Capri", "Fairview", "Greater Lagro", "Gulod", "Kaligayahan",
@@ -123,6 +124,9 @@ export default function BarangayClassifier() {
   const [hoveredField, setHoveredField] = useState(null);
   const [selectedPreset, setPreset] = useState("");
   const [showPresets, setShowPresets] = useState(false);
+  const [requestSeconds, setRequestSeconds] = useState(0);
+
+  const { status: serverStatus, secondsElapsed: serverSeconds } = useServerHealth();
 
   const handleChange = (id, val) => {
     setForm((f) => ({ ...f, [id]: val }));
@@ -156,6 +160,12 @@ export default function BarangayClassifier() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setRequestSeconds(0);
+
+    const startReqTime = Date.now();
+    const reqTimer = setInterval(() => {
+      setRequestSeconds(Math.floor((Date.now() - startReqTime) / 1000));
+    }, 500);
 
     try {
       const data = await classifyBarangay({
@@ -198,6 +208,7 @@ export default function BarangayClassifier() {
     } catch (e) {
       setError(e.message || "Failed to connect to classification server.");
     } finally {
+      clearInterval(reqTimer);
       setLoading(false);
     }
   };
@@ -213,13 +224,13 @@ export default function BarangayClassifier() {
     <div className="space-y-5">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
         {/* LEFT PANEL: Multi-Density Form */}
-        <div className="surface-card rounded-2xl p-6 space-y-4 flex flex-col justify-between">
+        <div className="neu-surface rounded-3xl p-6 space-y-4 flex flex-col justify-between">
           <div>
             {/* Header / Subtitle & Test Controls */}
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-1.5">
-                <Sliders className="w-4 h-4 text-blue-400" />
-                <span className="text-[13px] font-semibold tracking-[-0.01em] text-[#e6edf3]">
+                <Sliders className="w-4 h-4 text-indigo-600" />
+                <span className="text-[13px] font-semibold tracking-[-0.01em] text-slate-800">
                   Community Socio-Economic Profile
                 </span>
               </div>
@@ -229,22 +240,22 @@ export default function BarangayClassifier() {
                   onClick={() => setShowPresets(!showPresets)}
                   className={`flex items-center gap-1.5 px-3 py-1 text-[11px] font-medium rounded-xl transition-all cursor-pointer ${
                     showPresets
-                      ? "bg-blue-600/20 border border-blue-500/30 text-blue-400 font-bold"
-                      : "surface-inset border border-white/5 text-[#8b949e] hover:text-[#e6edf3]"
+                      ? "neu-inset text-indigo-700 font-bold"
+                      : "neu-btn text-slate-600 hover:text-slate-900"
                   }`}
                   title="Toggle Quick Test Samples on or off"
                 >
                   {showPresets ? (
-                    <EyeOff className="w-3.5 h-3.5 text-blue-400" />
+                    <EyeOff className="w-3.5 h-3.5 text-indigo-600" />
                   ) : (
-                    <Eye className="w-3.5 h-3.5 text-[#8b949e]" />
+                    <Eye className="w-3.5 h-3.5 text-slate-400" />
                   )}
                   <span>Testing Samples: {showPresets ? "ON" : "OFF"}</span>
                 </button>
 
                 <button
                   onClick={handleReset}
-                  className="flex items-center gap-1 text-[10px] font-medium text-[#8b949e] hover:text-rose-400 transition-colors cursor-pointer"
+                  className="flex items-center gap-1 text-[10px] font-medium text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
                 >
                   <RotateCcw className="w-3 h-3" /> Reset
                 </button>
@@ -253,21 +264,21 @@ export default function BarangayClassifier() {
 
             {/* Quick Fill Dropdown */}
             {showPresets && (
-              <div className="mb-4 p-3.5 rounded-xl surface-inset border border-white/5">
+              <div className="mb-4 p-3.5 rounded-2xl neu-inset-sm">
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-[10px] font-mono uppercase tracking-[0.12em] text-blue-400 font-semibold">
+                  <label className="text-[10px] font-mono uppercase tracking-[0.12em] text-indigo-700 font-semibold">
                     Testing Mode: Select Sample Community Profile
                   </label>
-                  <span className="text-[9px] text-[#8b949e] font-medium font-mono">Auto-fills 10 indicators</span>
+                  <span className="text-[9px] text-indigo-600 font-medium font-mono">Auto-fills 10 indicators</span>
                 </div>
                 <select
                   value={selectedPreset}
                   onChange={(e) => handlePresetSelect(e.target.value)}
-                  className="w-full form-input rounded-xl px-3 py-1.5 text-xs font-medium cursor-pointer"
+                  className="w-full px-3 py-1.5 text-xs font-medium text-slate-700 neu-input rounded-xl focus:outline-none cursor-pointer"
                 >
-                  <option value="" className="bg-[#0d1520] text-[#8b949e]">Choose a test profile to load...</option>
+                  <option value="">Choose a test profile to load...</option>
                   {SAMPLE_PRESETS.map((p, idx) => (
-                    <option key={idx} value={idx} className="bg-[#0d1520] text-[#e6edf3]">{p.name}</option>
+                    <option key={idx} value={idx}>{p.name}</option>
                   ))}
                 </select>
               </div>
@@ -275,25 +286,25 @@ export default function BarangayClassifier() {
 
             {/* Target Community Selector */}
             <div className="mb-4">
-              <label className="text-[11px] font-medium text-[#8b949e] mb-1.5 flex items-center justify-between">
+              <label className="block text-[11px] font-medium text-slate-500 mb-1 flex items-center justify-between">
                 <span>TARGET COMMUNITY (REFERENCE BARANGAY)</span>
-                <span className="text-[9.5px] text-[#484f58] font-normal">Identifies local jurisdiction</span>
+                <span className="text-[9.5px] text-slate-400 font-normal">Identifies local jurisdiction</span>
               </label>
               <select
                 value={form.barangay}
                 onChange={(e) => handleChange("barangay", e.target.value)}
-                className="w-full form-input rounded-xl px-3.5 py-2.5 text-xs font-semibold cursor-pointer"
+                className="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-800 neu-input rounded-xl cursor-pointer"
               >
                 {DISTRICT_V_BARANGAYS.map((b) => (
-                  <option key={b} value={b} className="bg-[#0d1520] text-[#e6edf3]">{b}</option>
+                  <option key={b} value={b}>{b}</option>
                 ))}
               </select>
             </div>
 
             {/* ── CLUSTER 1: ECONOMIC INDICATORS ── */}
             <div className="space-y-2.5 mb-4">
-              <div className="border-l-2 border-blue-500 pl-2.5">
-                <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-[#8b949e] block font-semibold">
+              <div className="border-l-2 border-indigo-500 pl-2.5">
+                <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-slate-400 block font-semibold">
                   ECONOMIC INDICATORS
                 </span>
               </div>
@@ -305,12 +316,12 @@ export default function BarangayClassifier() {
                   onMouseEnter={() => setHoveredField("avgMonthlyIncomePhp")}
                   onMouseLeave={() => setHoveredField(null)}
                 >
-                  <label className="text-[11px] font-medium text-[#8b949e] mb-1.5 flex items-center justify-between">
+                  <label className="block text-[11px] font-medium text-slate-600 mb-1 flex items-center justify-between">
                     <span>Avg. Monthly Income</span>
-                    <span className="text-[9.5px] font-mono text-blue-400 font-semibold">PRIMARY DRIVER</span>
+                    <span className="text-[9.5px] font-mono text-indigo-600 font-semibold">PRIMARY DRIVER</span>
                   </label>
-                  <div className="relative flex items-center rounded-xl surface-inset border-l-4 border-l-blue-500 overflow-hidden">
-                    <span className="pl-3.5 text-blue-400 font-bold text-sm">₱</span>
+                  <div className="relative flex items-center rounded-xl neu-inset border-l-4 border-l-indigo-600 overflow-hidden">
+                    <span className="pl-3.5 text-indigo-600 font-bold text-sm">₱</span>
                     <input
                       type="number"
                       min={2000}
@@ -319,11 +330,11 @@ export default function BarangayClassifier() {
                       placeholder="25,000"
                       value={form.avgMonthlyIncomePhp}
                       onChange={(e) => handleChange("avgMonthlyIncomePhp", e.target.value)}
-                      className="w-full px-2.5 py-2.5 text-sm font-semibold font-mono tabular-nums text-[#e6edf3] bg-transparent focus:outline-none placeholder:text-[#484f58]"
+                      className="w-full px-2.5 py-2.5 text-sm font-semibold font-mono tabular-nums text-slate-900 bg-transparent focus:outline-none placeholder:text-slate-400"
                     />
                   </div>
                   {hoveredField === "avgMonthlyIncomePhp" && (
-                    <div className="absolute left-0 -top-8 z-30 bg-[#0d1520] border border-white/10 text-[#e6edf3] text-[10px] px-2.5 py-1.5 rounded-lg shadow-xl pointer-events-none">
+                    <div className="absolute left-0 -top-8 z-30 bg-slate-900 text-white text-[10px] px-2.5 py-1.5 rounded-lg shadow-xl pointer-events-none">
                       Average monthly household income benchmarked against PSA FIES.
                     </div>
                   )}
@@ -335,7 +346,7 @@ export default function BarangayClassifier() {
                   onMouseEnter={() => setHoveredField("pctEmployedHead")}
                   onMouseLeave={() => setHoveredField(null)}
                 >
-                  <label className="block text-[11px] font-medium text-[#8b949e] mb-1.5 truncate">
+                  <label className="block text-[11px] font-medium text-slate-600 mb-1 truncate">
                     Employed Heads (%)
                   </label>
                   <input
@@ -346,10 +357,10 @@ export default function BarangayClassifier() {
                     placeholder="e.g. 60.0"
                     value={form.pctEmployedHead}
                     onChange={(e) => handleChange("pctEmployedHead", e.target.value)}
-                    className="w-full form-input rounded-xl px-3 py-2 text-xs font-mono tabular-nums font-medium"
+                    className="w-full px-3 py-2 text-xs font-mono tabular-nums font-medium text-slate-800 neu-input rounded-xl placeholder:text-slate-400"
                   />
                   {hoveredField === "pctEmployedHead" && (
-                    <div className="absolute right-0 -top-8 z-30 bg-[#0d1520] border border-white/10 text-[#e6edf3] text-[10px] px-2.5 py-1.5 rounded-lg shadow-xl pointer-events-none">
+                    <div className="absolute right-0 -top-8 z-30 bg-slate-900 text-white text-[10px] px-2.5 py-1.5 rounded-lg shadow-xl pointer-events-none">
                       Share of household heads gainfully employed.
                     </div>
                   )}
@@ -363,10 +374,10 @@ export default function BarangayClassifier() {
                 onMouseLeave={() => setHoveredField(null)}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-[11px] font-medium text-[#8b949e] truncate">
+                  <label className="block text-[11px] font-medium text-slate-600 truncate">
                     Informal Settlers Rate (%)
                   </label>
-                  <span className="text-[9px] text-[#484f58] font-normal">Tenure insecurity</span>
+                  <span className="text-[9px] text-slate-400 font-normal">Tenure insecurity</span>
                 </div>
                 <input
                   type="number"
@@ -376,10 +387,10 @@ export default function BarangayClassifier() {
                   placeholder="e.g. 28.5"
                   value={form.pctInformalSettlers}
                   onChange={(e) => handleChange("pctInformalSettlers", e.target.value)}
-                  className="w-full form-input rounded-xl px-3 py-2 text-xs font-mono tabular-nums font-medium"
+                  className="w-full px-3 py-2 text-xs font-mono tabular-nums font-medium text-slate-800 neu-input rounded-xl placeholder:text-slate-400"
                 />
                 {hoveredField === "pctInformalSettlers" && (
-                  <div className="absolute left-0 -top-8 z-30 bg-[#0d1520] border border-white/10 text-[#e6edf3] text-[10px] px-2.5 py-1.5 rounded-lg shadow-xl pointer-events-none">
+                  <div className="absolute left-0 -top-8 z-30 bg-slate-900 text-white text-[10px] px-2.5 py-1.5 rounded-lg shadow-xl pointer-events-none">
                     Households in informal or insecure tenure (PSA CPH Housing).
                   </div>
                 )}
@@ -388,8 +399,8 @@ export default function BarangayClassifier() {
 
             {/* ── CLUSTER 2: LIVING CONDITIONS (4-col compact grid) ── */}
             <div className="space-y-2.5 mb-4">
-              <div className="border-l-2 border-white/15 pl-2.5">
-                <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-[#8b949e] block font-semibold">
+              <div className="border-l-2 border-slate-300 pl-2.5">
+                <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-slate-400 block font-semibold">
                   LIVING CONDITIONS & UTILITIES (0-100%)
                 </span>
               </div>
@@ -401,7 +412,7 @@ export default function BarangayClassifier() {
                   onMouseEnter={() => setHoveredField("pctWithAccessToElectricity")}
                   onMouseLeave={() => setHoveredField(null)}
                 >
-                  <label className="block text-[10px] font-medium text-[#8b949e] truncate mb-1">
+                  <label className="block text-[10px] font-medium text-slate-600 truncate mb-1">
                     Electricity (%)
                   </label>
                   <input
@@ -412,10 +423,10 @@ export default function BarangayClassifier() {
                     placeholder="78.0"
                     value={form.pctWithAccessToElectricity}
                     onChange={(e) => handleChange("pctWithAccessToElectricity", e.target.value)}
-                    className="w-full form-input rounded-lg px-2.5 py-1.5 text-xs font-mono tabular-nums font-medium"
+                    className="w-full px-2.5 py-1.5 text-xs font-mono tabular-nums font-medium text-slate-800 neu-input rounded-lg"
                   />
                   {hoveredField === "pctWithAccessToElectricity" && (
-                    <div className="absolute left-0 -top-8 z-30 bg-[#0d1520] border border-white/10 text-[#e6edf3] text-[10px] px-2 py-1 rounded-md shadow-xl whitespace-nowrap pointer-events-none">
+                    <div className="absolute left-0 -top-8 z-30 bg-slate-900 text-white text-[10px] px-2 py-1 rounded-md shadow-xl whitespace-nowrap pointer-events-none">
                       Grid electricity access
                     </div>
                   )}
@@ -427,7 +438,7 @@ export default function BarangayClassifier() {
                   onMouseEnter={() => setHoveredField("pctWithSafeWaterAccess")}
                   onMouseLeave={() => setHoveredField(null)}
                 >
-                  <label className="block text-[10px] font-medium text-[#8b949e] truncate mb-1">
+                  <label className="block text-[10px] font-medium text-slate-600 truncate mb-1">
                     Safe Water (%)
                   </label>
                   <input
@@ -438,10 +449,10 @@ export default function BarangayClassifier() {
                     placeholder="70.0"
                     value={form.pctWithSafeWaterAccess}
                     onChange={(e) => handleChange("pctWithSafeWaterAccess", e.target.value)}
-                    className="w-full form-input rounded-lg px-2.5 py-1.5 text-xs font-mono tabular-nums font-medium"
+                    className="w-full px-2.5 py-1.5 text-xs font-mono tabular-nums font-medium text-slate-800 neu-input rounded-lg"
                   />
                   {hoveredField === "pctWithSafeWaterAccess" && (
-                    <div className="absolute left-0 -top-8 z-30 bg-[#0d1520] border border-white/10 text-[#e6edf3] text-[10px] px-2 py-1 rounded-md shadow-xl whitespace-nowrap pointer-events-none">
+                    <div className="absolute left-0 -top-8 z-30 bg-slate-900 text-white text-[10px] px-2 py-1 rounded-md shadow-xl whitespace-nowrap pointer-events-none">
                       Potable drinking water
                     </div>
                   )}
@@ -453,7 +464,7 @@ export default function BarangayClassifier() {
                   onMouseEnter={() => setHoveredField("pctWithSanitaryToilet")}
                   onMouseLeave={() => setHoveredField(null)}
                 >
-                  <label className="block text-[10px] font-medium text-[#8b949e] truncate mb-1">
+                  <label className="block text-[10px] font-medium text-slate-600 truncate mb-1">
                     Sanitary Toilet (%)
                   </label>
                   <input
@@ -464,10 +475,10 @@ export default function BarangayClassifier() {
                     placeholder="68.0"
                     value={form.pctWithSanitaryToilet}
                     onChange={(e) => handleChange("pctWithSanitaryToilet", e.target.value)}
-                    className="w-full form-input rounded-lg px-2.5 py-1.5 text-xs font-mono tabular-nums font-medium"
+                    className="w-full px-2.5 py-1.5 text-xs font-mono tabular-nums font-medium text-slate-800 neu-input rounded-lg"
                   />
                   {hoveredField === "pctWithSanitaryToilet" && (
-                    <div className="absolute left-0 -top-8 z-30 bg-[#0d1520] border border-white/10 text-[#e6edf3] text-[10px] px-2 py-1 rounded-md shadow-xl whitespace-nowrap pointer-events-none">
+                    <div className="absolute left-0 -top-8 z-30 bg-slate-900 text-white text-[10px] px-2 py-1 rounded-md shadow-xl whitespace-nowrap pointer-events-none">
                       Water-sealed toilet facility
                     </div>
                   )}
@@ -479,7 +490,7 @@ export default function BarangayClassifier() {
                   onMouseEnter={() => setHoveredField("pctPermanentHouseMaterial")}
                   onMouseLeave={() => setHoveredField(null)}
                 >
-                  <label className="block text-[10px] font-medium text-[#8b949e] truncate mb-1">
+                  <label className="block text-[10px] font-medium text-slate-600 truncate mb-1">
                     Perm. House (%)
                   </label>
                   <input
@@ -490,10 +501,10 @@ export default function BarangayClassifier() {
                     placeholder="55.0"
                     value={form.pctPermanentHouseMaterial}
                     onChange={(e) => handleChange("pctPermanentHouseMaterial", e.target.value)}
-                    className="w-full form-input rounded-lg px-2.5 py-1.5 text-xs font-mono tabular-nums font-medium"
+                    className="w-full px-2.5 py-1.5 text-xs font-mono tabular-nums font-medium text-slate-800 neu-input rounded-lg"
                   />
                   {hoveredField === "pctPermanentHouseMaterial" && (
-                    <div className="absolute right-0 -top-8 z-30 bg-[#0d1520] border border-white/10 text-[#e6edf3] text-[10px] px-2 py-1 rounded-md shadow-xl whitespace-nowrap pointer-events-none">
+                    <div className="absolute right-0 -top-8 z-30 bg-slate-900 text-white text-[10px] px-2 py-1 rounded-md shadow-xl whitespace-nowrap pointer-events-none">
                       Sturdy roof & concrete walls
                     </div>
                   )}
@@ -503,8 +514,8 @@ export default function BarangayClassifier() {
 
             {/* ── CLUSTER 3: HUMAN CAPITAL ── */}
             <div className="space-y-2.5">
-              <div className="border-l-2 border-white/15 pl-2.5">
-                <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-[#8b949e] block font-semibold">
+              <div className="border-l-2 border-slate-300 pl-2.5">
+                <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-slate-400 block font-semibold">
                   HUMAN CAPITAL & DEMOGRAPHICS
                 </span>
               </div>
@@ -516,7 +527,7 @@ export default function BarangayClassifier() {
                   onMouseEnter={() => setHoveredField("netEnrollmentRate")}
                   onMouseLeave={() => setHoveredField(null)}
                 >
-                  <label className="block text-[11px] font-medium text-[#8b949e] mb-1.5 truncate">
+                  <label className="block text-[11px] font-medium text-slate-600 mb-1 truncate">
                     School Enrollment (%)
                   </label>
                   <input
@@ -527,10 +538,10 @@ export default function BarangayClassifier() {
                     placeholder="81.0"
                     value={form.netEnrollmentRate}
                     onChange={(e) => handleChange("netEnrollmentRate", e.target.value)}
-                    className="w-full form-input rounded-xl px-3 py-2 text-xs font-mono tabular-nums font-medium"
+                    className="w-full px-3 py-2 text-xs font-mono tabular-nums font-medium text-slate-800 neu-input rounded-xl"
                   />
                   {hoveredField === "netEnrollmentRate" && (
-                    <div className="absolute left-0 -top-8 z-30 bg-[#0d1520] border border-white/10 text-[#e6edf3] text-[10px] px-2.5 py-1.5 rounded-lg shadow-xl pointer-events-none">
+                    <div className="absolute left-0 -top-8 z-30 bg-slate-900 text-white text-[10px] px-2.5 py-1.5 rounded-lg shadow-xl pointer-events-none">
                       Net enrollment of children aged 6 to 17.
                     </div>
                   )}
@@ -542,7 +553,7 @@ export default function BarangayClassifier() {
                   onMouseEnter={() => setHoveredField("pctCompletedSecondaryEducation")}
                   onMouseLeave={() => setHoveredField(null)}
                 >
-                  <label className="block text-[11px] font-medium text-[#8b949e] mb-1.5 truncate">
+                  <label className="block text-[11px] font-medium text-slate-600 mb-1 truncate">
                     Completed High School (%)
                   </label>
                   <input
@@ -553,10 +564,10 @@ export default function BarangayClassifier() {
                     placeholder="54.0"
                     value={form.pctCompletedSecondaryEducation}
                     onChange={(e) => handleChange("pctCompletedSecondaryEducation", e.target.value)}
-                    className="w-full form-input rounded-xl px-3 py-2 text-xs font-mono tabular-nums font-medium"
+                    className="w-full px-3 py-2 text-xs font-mono tabular-nums font-medium text-slate-800 neu-input rounded-xl"
                   />
                   {hoveredField === "pctCompletedSecondaryEducation" && (
-                    <div className="absolute right-0 -top-8 z-30 bg-[#0d1520] border border-white/10 text-[#e6edf3] text-[10px] px-2.5 py-1.5 rounded-lg shadow-xl pointer-events-none">
+                    <div className="absolute right-0 -top-8 z-30 bg-slate-900 text-white text-[10px] px-2.5 py-1.5 rounded-lg shadow-xl pointer-events-none">
                       Share of heads completing secondary education.
                     </div>
                   )}
@@ -570,10 +581,10 @@ export default function BarangayClassifier() {
                 onMouseLeave={() => setHoveredField(null)}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-[11px] font-medium text-[#8b949e] truncate">
+                  <label className="block text-[11px] font-medium text-slate-600 truncate">
                     Average Family Size (Household Members)
                   </label>
-                  <span className="text-[9px] text-[#484f58] font-normal">Subsistence divisor</span>
+                  <span className="text-[9px] text-slate-400 font-normal">Subsistence divisor</span>
                 </div>
                 <input
                   type="number"
@@ -583,10 +594,10 @@ export default function BarangayClassifier() {
                   placeholder="e.g. 5.1"
                   value={form.avgFamilySize}
                   onChange={(e) => handleChange("avgFamilySize", e.target.value)}
-                  className="w-full form-input rounded-xl px-3.5 py-2 text-xs font-mono tabular-nums font-medium"
+                  className="w-full px-3.5 py-2 text-xs font-mono tabular-nums font-medium text-slate-800 neu-input rounded-xl"
                 />
                 {hoveredField === "avgFamilySize" && (
-                  <div className="absolute left-0 -top-8 z-30 bg-[#0d1520] border border-white/10 text-[#e6edf3] text-[10px] px-2.5 py-1.5 rounded-lg shadow-xl pointer-events-none">
+                  <div className="absolute left-0 -top-8 z-30 bg-slate-900 text-white text-[10px] px-2.5 py-1.5 rounded-lg shadow-xl pointer-events-none">
                     Average household size dividing income and subsistence resources.
                   </div>
                 )}
@@ -599,26 +610,36 @@ export default function BarangayClassifier() {
             <button
               onClick={handleSubmit}
               disabled={!isFormValid || loading}
-              className="btn-primary w-full py-3.5 rounded-xl font-semibold text-[13px] flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3.5 rounded-2xl text-white font-semibold text-[13px] flex items-center justify-center gap-2 neu-btn-primary"
             >
               {loading ? (
                 <>
                   <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Running Stacking Model…</span>
+                  <span>
+                    {serverStatus === "waking" || requestSeconds >= 2
+                      ? `Waking Server (${requestSeconds || serverSeconds}s)…`
+                      : "Running Stacking Model…"}
+                  </span>
                 </>
               ) : (
                 <span>Classify Barangay Income Tier</span>
               )}
             </button>
 
+            {loading && (serverStatus === "waking" || requestSeconds >= 2) && (
+              <p className="text-center text-[10.5px] text-amber-700 bg-amber-500/10 border border-amber-300/60 rounded-xl py-1.5 px-3 mt-2 font-medium">
+                ⏳ First request wakes the Render cloud container (~30s). Please keep this page open.
+              </p>
+            )}
+
             {!isFormValid && !loading && (
-              <p className="text-center text-[10px] text-[#8b949e] flex items-center justify-center gap-1 mt-2 font-mono">
+              <p className="text-center text-[10px] text-slate-400 flex items-center justify-center gap-1 mt-2 font-mono">
                 <AlertCircle className="w-3 h-3" /> Complete all 10 indicators to run the machine learning classification.
               </p>
             )}
 
             {error && (
-              <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-xl p-3 text-[11px] font-medium mt-2">
+              <div className="bg-red-500/10 border border-red-300 text-red-700 rounded-2xl p-3 text-[11px] font-medium mt-2">
                 {error}
               </div>
             )}
@@ -626,13 +647,41 @@ export default function BarangayClassifier() {
         </div>
 
         {/* RIGHT PANEL: Classification Results & Staggered Reveal */}
-        <div className="h-[620px] overflow-y-auto pr-1 space-y-4 rounded-2xl scrollbar-thin">
+        <div className="h-[620px] overflow-y-auto pr-1 space-y-4 rounded-3xl scrollbar-thin scrollbar-thumb-slate-300">
+          {loading && (
+            <div className="h-full neu-surface rounded-3xl flex flex-col items-center justify-center text-center p-8 border border-white/80">
+              <motion.div
+                animate={{ scale: [1, 1.05, 1], rotate: [0, 180, 360] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                className="w-16 h-16 mb-4 flex items-center justify-center p-3 neu-inset-sm rounded-2xl text-indigo-600"
+              >
+                <RotateCcw className="w-8 h-8 animate-spin text-indigo-600" />
+              </motion.div>
+              <h3 className="text-sm font-bold text-slate-800">
+                {serverStatus === "waking" || requestSeconds >= 2
+                  ? "Waking Cloud Backend Instance"
+                  : "Computing ML Ensemble Prediction"}
+              </h3>
+              <p className="text-xs font-mono text-indigo-600 font-semibold mt-1">
+                {requestSeconds > 0 ? `${requestSeconds}s elapsed` : "Initializing inference…"}
+              </p>
+              <p className="text-[11px] text-slate-500 mt-2 max-w-[280px] leading-relaxed">
+                {serverStatus === "waking" || requestSeconds >= 2
+                  ? "Render free-tier instances hibernate after 15 min of inactivity. Loading runtime & 62MB Scikit-Learn stacking model into memory (~30s)."
+                  : "Evaluating 10 community socio-economic indicators across Random Forest and Gradient Boosting base estimators."}
+              </p>
+              <div className="w-48 h-1.5 rounded-full neu-inset overflow-hidden mt-4">
+                <div className="h-full bg-gradient-to-r from-indigo-500 to-amber-500 rounded-full animate-pulse w-3/4" />
+              </div>
+            </div>
+          )}
+
           {!result && !loading && (
-            <div className="h-full surface-card rounded-2xl flex flex-col items-center justify-center text-center p-10 border border-white/5">
+            <div className="h-full neu-surface rounded-3xl flex flex-col items-center justify-center text-center p-10">
               <motion.div
                 animate={{ y: [0, -6, 0] }}
                 transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                className="w-16 h-16 mb-3 flex items-center justify-center p-2 surface-inset rounded-2xl border border-white/5"
+                className="w-16 h-16 mb-3 flex items-center justify-center p-2 neu-inset-sm rounded-2xl"
               >
                 <img
                   src={kalingaLogo}
@@ -640,8 +689,8 @@ export default function BarangayClassifier() {
                   className="w-full h-full object-contain"
                 />
               </motion.div>
-              <p className="text-sm font-semibold text-[#e6edf3]">Ready to Classify</p>
-              <p className="text-[11px] text-[#8b949e] mt-1 max-w-[260px] leading-relaxed font-normal">
+              <p className="text-sm font-semibold text-slate-700">Ready to Classify</p>
+              <p className="text-[11px] text-slate-400 mt-1 max-w-[260px] leading-relaxed font-normal">
                 Provide the community indicators on the left and run classification to view the ML predictions, confidence levels, and decision drivers.
               </p>
             </div>

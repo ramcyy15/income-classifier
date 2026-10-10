@@ -6,10 +6,10 @@ const PSA_TIER_META = {
     level: "Level 1",
     label: "Low-Income Tier",
     subLabel: "Survival",
-    color: "#F43F5E",
-    bg: "bg-rose-500/10",
-    border: "border-rose-500/30",
-    text: "text-rose-400",
+    color: "#EF4444",
+    bg: "bg-red-500/10",
+    border: "border-red-300/80",
+    text: "text-red-700",
   },
   Middle: {
     level: "Level 2",
@@ -17,8 +17,8 @@ const PSA_TIER_META = {
     subLabel: "Subsistence",
     color: "#F59E0B",
     bg: "bg-amber-500/10",
-    border: "border-amber-500/30",
-    text: "text-amber-400",
+    border: "border-amber-300/80",
+    text: "text-amber-700",
   },
   High: {
     level: "Level 3",
@@ -26,8 +26,8 @@ const PSA_TIER_META = {
     subLabel: "Self-Sufficient",
     color: "#10B981",
     bg: "bg-emerald-500/10",
-    border: "border-emerald-500/30",
-    text: "text-emerald-400",
+    border: "border-emerald-300/80",
+    text: "text-emerald-700",
   },
 };
 
@@ -49,12 +49,12 @@ export default function PredictionCard({
   }));
 
   return (
-    <div className="surface-card rounded-2xl p-6 space-y-4">
+    <div className="neu-surface rounded-3xl p-6 space-y-4">
       {/* Header Info */}
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-[#8b949e]">
+            <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-slate-400">
               {isIndividual ? "SWDI CLASSIFICATION" : "OFFICIAL INCOME TIER"}
             </span>
             <span
@@ -64,28 +64,28 @@ export default function PredictionCard({
             </span>
           </div>
 
-          <h2 className="text-3xl font-bold tracking-tight text-[#e6edf3]">
+          <h2 className="text-3xl font-bold tracking-tight text-slate-900">
             {meta.level}
           </h2>
-          <p className="text-xs font-medium text-[#8b949e] mt-0.5">
+          <p className="text-xs font-medium text-slate-500 mt-0.5">
             {targetName}
           </p>
         </div>
 
-        {/* Model Confidence Box */}
-        <div className="text-right surface-inset px-4 py-2.5 rounded-xl border border-white/5">
-          <span className="text-2xl font-bold font-mono tabular-nums text-blue-400 leading-none">
+        {/* Model Confidence Box with Debossed Inset */}
+        <div className="text-right neu-inset-sm px-4 py-2.5 rounded-2xl">
+          <span className="text-2xl font-bold font-mono tabular-nums text-indigo-600 leading-none">
             {(confidence * 100).toFixed(1)}%
           </span>
-          <p className="text-[10px] font-medium text-[#8b949e] mt-1 font-mono">Model Confidence</p>
+          <p className="text-[10px] font-medium text-slate-400 mt-1 font-mono">Model Confidence</p>
         </div>
       </div>
 
       {/* Probability Distribution Chart */}
-      <div className="pt-3 border-t border-white/8">
+      <div className="pt-2 border-t border-slate-200/60">
         <div className="flex items-center justify-between mb-2">
-          <p className="text-[11px] font-semibold text-[#e6edf3]">Tier Probability Distribution</p>
-          <span className="text-[10px] font-mono text-[#8b949e]">Stacking Ensemble Softmax</span>
+          <p className="text-[11px] font-semibold text-slate-700">Tier Probability Distribution</p>
+          <span className="text-[10px] font-mono text-slate-400">Stacking Ensemble Softmax</span>
         </div>
 
         <div className="h-36 w-full pt-1">
@@ -96,28 +96,28 @@ export default function PredictionCard({
             >
               <XAxis
                 dataKey="name"
-                tick={{ fontSize: 11, fontWeight: 500, fill: "#8b949e" }}
-                axisLine={{ stroke: "#1f2937" }}
+                tick={{ fontSize: 11, fontWeight: 500, fill: "#64748b" }}
+                axisLine={{ stroke: "#cbd5e1" }}
                 tickLine={false}
               />
               <YAxis
                 domain={[0, 100]}
-                tick={{ fontSize: 10, fill: "#484f58" }}
+                tick={{ fontSize: 10, fill: "#94a3b8" }}
                 axisLine={false}
                 tickLine={false}
                 unit="%"
               />
               <Tooltip
-                cursor={{ fill: "rgba(255, 255, 255, 0.03)" }}
+                cursor={{ fill: "rgba(226, 232, 240, 0.4)" }}
                 content={({ active, payload }) => {
                   if (active && payload && payload.length) {
                     const d = payload[0].payload;
                     return (
-                      <div className="bg-[#0d1520] border border-white/10 text-white text-[11px] px-3 py-2 rounded-xl shadow-2xl space-y-0.5">
-                        <p className="font-semibold text-[#e6edf3]">
+                      <div className="bg-slate-900 text-white text-[11px] px-3 py-2 rounded-xl shadow-xl space-y-0.5">
+                        <p className="font-semibold text-slate-200">
                           {d.name} · {d.label}
                         </p>
-                        <p className="text-blue-400 font-bold font-mono text-xs">
+                        <p className="text-indigo-300 font-bold font-mono text-xs">
                           {d.percentage}% probability
                         </p>
                       </div>
@@ -135,7 +135,7 @@ export default function PredictionCard({
                 {chartData.map((entry) => (
                   <Cell
                     key={entry.name}
-                    fill={entry.isWinner ? "#3b82f6" : "#212f45"}
+                    fill={entry.isWinner ? "#4f46e5" : "#94a3b8"}
                   />
                 ))}
               </Bar>
@@ -143,13 +143,13 @@ export default function PredictionCard({
           </ResponsiveContainer>
         </div>
 
-        <div className="flex items-center justify-between text-[10px] text-[#8b949e] font-medium px-1 pt-2">
+        <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium px-1 pt-2">
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm bg-blue-500 inline-block" />
+            <span className="w-2.5 h-2.5 rounded-sm bg-indigo-600 inline-block shadow-xs" />
             Classified Tier (Highest Probability)
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm bg-[#212f45] inline-block" />
+            <span className="w-2.5 h-2.5 rounded-sm bg-slate-400 inline-block" />
             Alternative Classes
           </span>
         </div>

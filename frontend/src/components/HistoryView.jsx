@@ -11,20 +11,20 @@ const TIER_META = {
   Low: {
     level: "Level 1",
     label: "Survival",
-    dot: "bg-rose-500",
-    text: "text-rose-400",
+    dot: "bg-red-500",
+    text: "text-red-700",
   },
   Middle: {
     level: "Level 2",
     label: "Subsistence",
     dot: "bg-amber-500",
-    text: "text-amber-400",
+    text: "text-amber-700",
   },
   High: {
     level: "Level 3",
     label: "Self-Sufficient",
     dot: "bg-emerald-500",
-    text: "text-emerald-400",
+    text: "text-emerald-700",
   },
 };
 
@@ -108,17 +108,17 @@ export default function HistoryView({ onNavigateToClassifier }) {
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
       {/* Top Banner Dashboard Card */}
-      <div className="surface-card rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="neu-surface rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center">
+            <span className="w-8 h-8 rounded-xl neu-inset-sm text-indigo-600 flex items-center justify-center">
               <History className="w-4 h-4" />
             </span>
-            <h1 className="text-base font-bold tracking-[-0.01em] text-[#e6edf3]">
+            <h1 className="text-base font-bold tracking-[-0.01em] text-slate-900">
               Classification Audit Trail
             </h1>
           </div>
-          <p className="text-[11px] text-[#8b949e] font-medium">
+          <p className="text-[11px] text-slate-500 font-medium">
             Forensic audit ledger: track model inference outputs, compare dual profiles, and export CSV archives.
           </p>
         </div>
@@ -128,13 +128,13 @@ export default function HistoryView({ onNavigateToClassifier }) {
             <>
               <button
                 onClick={handleExportCSV}
-                className="btn-ghost flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-xl cursor-pointer"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 neu-btn text-slate-700 text-xs font-semibold rounded-xl cursor-pointer"
               >
-                <Download className="w-3.5 h-3.5 text-[#8b949e]" /> Export CSV
+                <Download className="w-3.5 h-3.5 text-slate-500" /> Export CSV
               </button>
               <button
                 onClick={handleClear}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:text-rose-300 text-xs font-semibold rounded-xl cursor-pointer transition-colors"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 neu-btn text-red-600 hover:text-red-700 text-xs font-semibold rounded-xl cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" /> Clear All
               </button>
@@ -145,27 +145,27 @@ export default function HistoryView({ onNavigateToClassifier }) {
 
       {/* Filter Tabs & Comparison Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center surface-inset p-1.5 rounded-xl border border-white/5 gap-1.5">
+        <div className="flex items-center neu-inset p-1.5 rounded-2xl gap-1.5">
           <button
             onClick={() => setFilterType("all")}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              filterType === "all" ? "bg-blue-600/20 border border-blue-500/30 text-blue-400 font-bold" : "text-[#8b949e] hover:text-[#e6edf3]"
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              filterType === "all" ? "neu-surface-sm text-slate-900 font-bold" : "text-slate-500 hover:text-slate-800"
             }`}
           >
             All Logs ({history.length})
           </button>
           <button
             onClick={() => setFilterType("barangay")}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              filterType === "barangay" ? "bg-blue-600/20 border border-blue-500/30 text-blue-400 font-bold" : "text-[#8b949e] hover:text-[#e6edf3]"
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              filterType === "barangay" ? "neu-surface-sm text-slate-900 font-bold" : "text-slate-500 hover:text-slate-800"
             }`}
           >
             Barangay ({history.filter((h) => h.type === "barangay").length})
           </button>
           <button
             onClick={() => setFilterType("individual")}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              filterType === "individual" ? "bg-blue-600/20 border border-blue-500/30 text-blue-400 font-bold" : "text-[#8b949e] hover:text-[#e6edf3]"
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              filterType === "individual" ? "neu-surface-sm text-slate-900 font-bold" : "text-slate-500 hover:text-slate-800"
             }`}
           >
             Household ({history.filter((h) => h.type === "individual").length})
@@ -174,16 +174,16 @@ export default function HistoryView({ onNavigateToClassifier }) {
 
         {/* Selected comparison action badge */}
         <div className="flex items-center gap-3">
-          <span className="text-xs font-medium text-[#8b949e]">
-            Selected for comparison: <strong className="text-blue-400 font-mono font-bold">{selectedIds.length}/2</strong>
+          <span className="text-xs font-medium text-slate-500">
+            Selected for comparison: <strong className="text-indigo-600 font-mono font-bold">{selectedIds.length}/2</strong>
           </span>
           <button
             disabled={selectedIds.length !== 2}
             onClick={() => setShowCompareModal(true)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               selectedIds.length === 2
-                ? "btn-primary cursor-pointer"
-                : "surface-inset opacity-40 text-[#484f58] border border-white/5 cursor-not-allowed"
+                ? "neu-btn-primary text-white shadow-md cursor-pointer"
+                : "neu-btn opacity-50 text-slate-400 cursor-not-allowed"
             }`}
           >
             <ArrowUpDown className="w-3.5 h-3.5" /> Launch Side-by-Side
@@ -193,25 +193,25 @@ export default function HistoryView({ onNavigateToClassifier }) {
 
       {/* Audit Ledger Table Container */}
       {filteredHistory.length === 0 ? (
-        <div className="surface-card rounded-2xl p-12 text-center border border-white/5">
-          <div className="w-12 h-12 rounded-xl surface-inset border border-white/5 flex items-center justify-center mx-auto mb-3 text-[#8b949e]">
+        <div className="neu-surface rounded-3xl p-12 text-center">
+          <div className="w-12 h-12 rounded-2xl neu-inset-sm flex items-center justify-center mx-auto mb-3 text-slate-400">
             <History className="w-6 h-6" />
           </div>
-          <h3 className="text-sm font-semibold text-[#e6edf3]">No Classification Runs Yet</h3>
-          <p className="text-xs text-[#8b949e] mt-1 max-w-sm mx-auto font-normal">
+          <h3 className="text-sm font-semibold text-slate-800">No Classification Runs Yet</h3>
+          <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto font-normal">
             Run an inference in the Barangay or Household classifier and records will automatically appear in this audit ledger.
           </p>
           <button
             onClick={onNavigateToClassifier}
-            className="mt-4 inline-flex items-center gap-2 px-4 py-2 btn-primary text-xs font-semibold rounded-xl cursor-pointer"
+            className="mt-4 inline-flex items-center gap-2 px-4 py-2 neu-btn-primary text-white text-xs font-semibold rounded-xl cursor-pointer"
           >
             Go to Classifier <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
       ) : (
-        <div className="surface-card rounded-2xl overflow-hidden border border-white/5">
+        <div className="neu-surface rounded-3xl overflow-hidden">
           {/* Table Column Headers */}
-          <div className="hidden md:grid grid-cols-12 gap-3 px-5 py-3 bg-[#0a1018] border-b border-white/8 text-[10px] font-mono uppercase tracking-[0.12em] text-[#8b949e] font-semibold items-center">
+          <div className="hidden md:grid grid-cols-12 gap-3 px-5 py-3 bg-slate-50/90 border-b border-slate-200/80 text-[10px] font-mono uppercase tracking-[0.12em] text-slate-400 font-semibold items-center">
             <div className="col-span-1 flex items-center gap-2">
               <span>#</span>
             </div>
@@ -224,7 +224,7 @@ export default function HistoryView({ onNavigateToClassifier }) {
           </div>
 
           {/* Table Rows with Staggered Motion */}
-          <div className="divide-y divide-white/5">
+          <div className="divide-y divide-slate-100">
             {filteredHistory.map((item, idx) => {
               const isSelected = selectedIds.includes(item.id);
               const ordinal = history.length - history.findIndex((h) => h.id === item.id);
@@ -239,8 +239,8 @@ export default function HistoryView({ onNavigateToClassifier }) {
                   onClick={() => toggleSelect(item.id)}
                   className={`px-5 py-3.5 transition-colors cursor-pointer ${
                     isSelected
-                      ? "bg-blue-500/10 border-l-4 border-l-blue-500 pl-[17px]"
-                      : "hover:bg-[#111d2e]/40 border-l-4 border-l-transparent"
+                      ? "bg-indigo-50/40 border-l-4 border-l-indigo-600 pl-[17px]"
+                      : "hover:bg-slate-50/80 border-l-4 border-l-transparent"
                   }`}
                 >
                   {/* Desktop Grid Layout */}
@@ -251,20 +251,20 @@ export default function HistoryView({ onNavigateToClassifier }) {
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => {}}
-                        className="w-3.5 h-3.5 rounded accent-blue-500 pointer-events-none"
+                        className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 pointer-events-none"
                       />
-                      <span className="font-mono text-[#8b949e] text-[11px] tabular-nums">
+                      <span className="font-mono text-slate-400 text-[11px] tabular-nums">
                         #{ordinal}
                       </span>
                     </div>
 
                     {/* Timestamp */}
-                    <div className="col-span-3 font-mono text-[11px] text-[#8b949e] tabular-nums">
+                    <div className="col-span-3 font-mono text-[11px] text-slate-500 tabular-nums">
                       {formatTimestamp(item.timestamp)}
                     </div>
 
                     {/* Target */}
-                    <div className="col-span-3 font-semibold text-[#e6edf3] truncate">
+                    <div className="col-span-3 font-semibold text-slate-900 truncate">
                       {item.target}
                     </div>
 
@@ -273,8 +273,8 @@ export default function HistoryView({ onNavigateToClassifier }) {
                       <span
                         className={`text-[9px] font-mono uppercase tracking-[0.1em] px-2 py-0.5 rounded-md font-semibold ${
                           item.type === "barangay"
-                            ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
-                            : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                            ? "bg-indigo-50 text-indigo-700 border border-indigo-100"
+                            : "bg-emerald-50 text-emerald-700 border border-emerald-100"
                         }`}
                       >
                         {item.type === "barangay" ? "BRGY" : "INDV"}
@@ -287,18 +287,18 @@ export default function HistoryView({ onNavigateToClassifier }) {
                       <span className={`font-semibold text-xs ${tierInfo.text}`}>
                         {tierInfo.level}
                       </span>
-                      <span className="text-[10px] text-[#8b949e] font-normal">
+                      <span className="text-[10px] text-slate-400 font-normal">
                         ({tierInfo.label})
                       </span>
                     </div>
 
                     {/* Confidence */}
-                    <div className="col-span-1 text-right font-mono font-bold tabular-nums text-[#e6edf3]">
+                    <div className="col-span-1 text-right font-mono font-bold tabular-nums text-slate-800">
                       {item.confidence ? `${item.confidence}%` : "—"}
                     </div>
 
                     {/* Top Driver */}
-                    <div className="col-span-1 text-right text-[11px] text-[#8b949e] truncate" title={item.top_feature}>
+                    <div className="col-span-1 text-right text-[11px] text-slate-500 truncate" title={item.top_feature}>
                       {item.top_feature ? item.top_feature.split(" ")[0] : "—"}
                     </div>
                   </div>
@@ -311,29 +311,29 @@ export default function HistoryView({ onNavigateToClassifier }) {
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => {}}
-                          className="w-3.5 h-3.5 rounded accent-blue-500 pointer-events-none"
+                          className="w-3.5 h-3.5 rounded text-indigo-600 pointer-events-none"
                         />
-                        <span className="font-mono text-[#8b949e] text-xs">#{ordinal}</span>
-                        <h4 className="font-semibold text-[#e6edf3] text-sm">{item.target}</h4>
+                        <span className="font-mono text-slate-400 text-xs">#{ordinal}</span>
+                        <h4 className="font-semibold text-slate-900 text-sm">{item.target}</h4>
                       </div>
                       <span className={`text-[9px] font-mono px-2 py-0.5 rounded-md font-semibold ${
-                        item.type === "barangay" ? "bg-blue-500/10 text-blue-400" : "bg-emerald-500/10 text-emerald-400"
+                        item.type === "barangay" ? "bg-indigo-50 text-indigo-700" : "bg-emerald-50 text-emerald-700"
                       }`}>
                         {item.type === "barangay" ? "BRGY" : "INDV"}
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs text-[#8b949e]">
+                    <div className="flex items-center justify-between text-xs text-slate-500">
                       <div className="flex items-center gap-1.5">
                         <span className={`w-2 h-2 rounded-full ${tierInfo.dot}`} />
                         <span className={`font-semibold ${tierInfo.text}`}>{tierInfo.level}</span>
                       </div>
-                      <div className="font-mono font-bold text-[#e6edf3]">
+                      <div className="font-mono font-bold text-slate-800">
                         {item.confidence ? `${item.confidence}%` : "—"}
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-[10px] text-[#8b949e] font-mono">
+                    <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono">
                       <span>{formatTimestamp(item.timestamp)}</span>
                       {item.top_feature && <span>Driver: {item.top_feature}</span>}
                     </div>
