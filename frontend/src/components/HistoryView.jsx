@@ -45,6 +45,7 @@ export default function HistoryView({ onNavigateToClassifier }) {
   const [selectedIds, setSelectedIds] = useState([]);
   const [filterType, setFilterType] = useState("all");
   const [showCompareModal, setShowCompareModal] = useState(false);
+  const [notice, setNotice] = useState(null);
 
   const loadData = () => {
     setHistory(getClassificationHistory());
@@ -60,18 +61,55 @@ export default function HistoryView({ onNavigateToClassifier }) {
     if (window.confirm("Clear all recorded classification history records?")) {
       clearClassificationHistory();
       setSelectedIds([]);
+      setNotice(null);
     }
   };
 
+  const selectedType = selectedIds.length > 0
+    ? history.find((h) => h.id === selectedIds[0])?.type
+    : null;
+
   const toggleSelect = (id) => {
+    const clickedItem = history.find((h) => h.id === id);
+    if (!clickedItem) return;
+
     if (selectedIds.includes(id)) {
       setSelectedIds(selectedIds.filter((item) => item !== id));
-    } else {
-      if (selectedIds.length >= 2) {
-        setSelectedIds([selectedIds[1], id]);
-      } else {
-        setSelectedIds([...selectedIds, id]);
+      setNotice(null);
+      return;
+    }
+
+    if (selectedIds.length === 0) {
+      setSelectedIds([id]);
+      setNotice(null);
+      return;
+    }
+
+    if (selectedIds.length === 1) {
+      const firstItem = history.find((h) => h.id === selectedIds[0]);
+      if (firstItem && firstItem.type !== clickedItem.type) {
+        // Strict requirement: Only barangay -> barangay and household -> household
+        setSelectedIds([id]);
+        setNotice(
+          `Comparison is only allowed between matching types (${firstItem.type === "barangay" ? "Barangay ↔ Barangay" : "Household ↔ Household"}). Switched selection to ${clickedItem.target}.`
+        );
+        return;
       }
+      setSelectedIds([...selectedIds, id]);
+      setNotice(null);
+      return;
+    }
+
+    // When already 2 selected, shift selection
+    const firstItem = history.find((h) => h.id === selectedIds[1]);
+    if (firstItem && firstItem.type !== clickedItem.type) {
+      setSelectedIds([id]);
+      setNotice(
+        `Switched selection to ${clickedItem.type === "barangay" ? "Barangay" : "Household"} (${clickedItem.target}).`
+      );
+    } else {
+      setSelectedIds([selectedIds[1], id]);
+      setNotice(null);
     }
   };
 
@@ -104,6 +142,7 @@ export default function HistoryView({ onNavigateToClassifier }) {
   });
 
   const compareItems = history.filter((item) => selectedIds.includes(item.id));
+  const canLaunchCompare = compareItems.length === 2 && compareItems[0].type === compareItems[1].type;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
@@ -174,22 +213,73 @@ export default function HistoryView({ onNavigateToClassifier }) {
 
         {/* Selected comparison action badge */}
         <div className="flex items-center gap-3">
-          <span className="text-xs font-medium text-slate-500">
-            Selected for comparison: <strong className="text-indigo-600 font-mono font-bold">{selectedIds.length}/2</strong>
-          </span>
+          <div className="text-right">
+            <span className="text-xs font-medium text-slate-600 block">
+              {selectedIds.length === 0 ? (
+                <span>Compare: Select 2 matching profiles</span>
+              ) : selectedIds.length === 1 ? (
+                <span>
+                  Select another <strong className="text-indigo-600">{selectedType === "barangay" ? "Barangay" : "Household"}</strong>
+                </span>
+              ) : (
+                <span>
+                  Comparing 2 <strong className="text-emerald-700">{selectedType === "barangay" ? "Barangays" : "Households"}</strong>
+                </span>
+              )}
+            </span>
+          </div>
+
+          {selectedIds.length > 0 && (
+            <button
+              onClick={() => {
+                setSelectedIds([]);
+                setNotice(null);
+              }}
+              className="text-[11px] text-slate-400 hover:text-slate-600 px-2 py-1 rounded-lg hover:bg-slate-200/50"
+              title="Reset selection"
+            >
+              Reset
+            </button>
+          )}
+
           <button
-            disabled={selectedIds.length !== 2}
+            disabled={!canLaunchCompare}
             onClick={() => setShowCompareModal(true)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-              selectedIds.length === 2
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-transform active:scale-95 cursor-pointer ${
+              canLaunchCompare
                 ? "neu-btn-primary text-white shadow-md cursor-pointer"
                 : "neu-btn opacity-50 text-slate-400 cursor-not-allowed"
             }`}
           >
-            <ArrowUpDown className="w-3.5 h-3.5" /> Launch Side-by-Side
+            <ArrowUpDown className="w-3.5 h-3.5" />
+            <span>
+              {canLaunchCompare
+                ? `Compare ${selectedType === "barangay" ? "Barangays" : "Households"}`
+                : "Launch Comparison"}
+            </span>
           </button>
         </div>
       </div>
+
+      {/* Helpful Toast / Notice if user attempts mismatched selection */}
+      {notice && (
+        <motion.div
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="neu-surface-sm rounded-2xl px-4 py-2.5 text-xs text-amber-800 bg-amber-50/80 border border-amber-200 flex items-center justify-between gap-2"
+        >
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+            <span>{notice}</span>
+          </div>
+          <button
+            onClick={() => setNotice(null)}
+            className="text-amber-600 hover:text-amber-900 text-xs font-bold px-1"
+          >
+            ✕
+          </button>
+        </motion.div>
+      )}
 
       {/* Audit Ledger Table Container */}
       {filteredHistory.length === 0 ? (
@@ -229,6 +319,7 @@ export default function HistoryView({ onNavigateToClassifier }) {
               const isSelected = selectedIds.includes(item.id);
               const ordinal = history.length - history.findIndex((h) => h.id === item.id);
               const tierInfo = TIER_META[item.predicted_class] || TIER_META.Middle;
+              const isTypeMismatched = selectedIds.length === 1 && item.type !== selectedType;
 
               return (
                 <motion.div
@@ -237,9 +328,16 @@ export default function HistoryView({ onNavigateToClassifier }) {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.25, delay: idx * 0.03, ease: [0.23, 1, 0.32, 1] }}
                   onClick={() => toggleSelect(item.id)}
-                  className={`px-5 py-3.5 transition-colors cursor-pointer ${
+                  title={
+                    isTypeMismatched
+                      ? `Click to switch comparison to ${item.type === "barangay" ? "Barangays" : "Households"}`
+                      : ""
+                  }
+                  className={`px-5 py-3.5 transition-all cursor-pointer ${
                     isSelected
                       ? "bg-indigo-50/40 border-l-4 border-l-indigo-600 pl-[17px]"
+                      : isTypeMismatched
+                      ? "opacity-50 hover:opacity-80 hover:bg-slate-50 border-l-4 border-l-transparent"
                       : "hover:bg-slate-50/80 border-l-4 border-l-transparent"
                   }`}
                 >
@@ -264,8 +362,13 @@ export default function HistoryView({ onNavigateToClassifier }) {
                     </div>
 
                     {/* Target */}
-                    <div className="col-span-3 font-semibold text-slate-900 truncate">
-                      {item.target}
+                    <div className="col-span-3 font-semibold text-slate-900 truncate flex items-center gap-2">
+                      <span className="truncate">{item.target}</span>
+                      {isTypeMismatched && (
+                        <span className="text-[9px] font-mono text-slate-400 border border-slate-200 px-1.5 py-0.2 rounded whitespace-nowrap">
+                          different type
+                        </span>
+                      )}
                     </div>
 
                     {/* Type Badge */}

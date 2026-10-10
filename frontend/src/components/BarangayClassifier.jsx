@@ -196,9 +196,14 @@ export default function BarangayClassifier() {
           top_feature: topDriver,
           inputs: {
             "Avg Monthly Income": `PHP ${Number(form.avgMonthlyIncomePhp).toLocaleString()}`,
-            "Informal Settlers": `${form.pctInformalSettlers}%`,
-            "Permanent Housing": `${form.pctPermanentHouseMaterial}%`,
             "Employed Heads": `${form.pctEmployedHead}%`,
+            "Informal Settlers": `${form.pctInformalSettlers}%`,
+            "Electricity Access": `${form.pctWithAccessToElectricity}%`,
+            "Safe Water Access": `${form.pctWithSafeWaterAccess}%`,
+            "Sanitary Toilet": `${form.pctWithSanitaryToilet}%`,
+            "Permanent Housing": `${form.pctPermanentHouseMaterial}%`,
+            "School Enrollment": `${form.netEnrollmentRate}%`,
+            "Secondary Educated": `${form.pctCompletedSecondaryEducation}%`,
             "Avg Family Size": form.avgFamilySize,
           },
         });
