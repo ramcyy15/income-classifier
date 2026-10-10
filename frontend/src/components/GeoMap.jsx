@@ -21,9 +21,9 @@ const DISTRICT_V_COORDS = {
 };
 
 const TIER_COLORS = {
-  Low:    { fill: "#EF4444", ring: "#FCA5A5", label: "Level 1 · Low-Income"    },
-  Middle: { fill: "#F59E0B", ring: "#FDE68A", label: "Level 2 · Middle-Income" },
-  High:   { fill: "#10B981", ring: "#6EE7B7", label: "Level 3 · High-Income"   },
+  Low:    { fill: "#F43F5E", ring: "rgba(244, 63, 94, 0.25)", label: "Level 1 · Low-Income"    },
+  Middle: { fill: "#F59E0B", ring: "rgba(245, 158, 11, 0.25)", label: "Level 2 · Middle-Income" },
+  High:   { fill: "#10B981", ring: "rgba(16, 185, 129, 0.25)", label: "Level 3 · High-Income"   },
 };
 
 const DISTRICT_V_CENTER = [14.7380, 121.0490];
@@ -46,12 +46,12 @@ export default function GeoMap({ barangay, tier }) {
   const tierMeta = TIER_COLORS[tier] || TIER_COLORS["Middle"];
 
   return (
-    <div className="neu-surface rounded-3xl overflow-hidden">
+    <div className="surface-card rounded-2xl overflow-hidden">
       {/* Header */}
       <div className="px-5 pt-4 pb-3 flex items-center justify-between">
         <div>
-          <p className="text-xs font-bold text-slate-800">Barangay Location</p>
-          <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+          <p className="text-xs font-bold text-[#e6edf3]">Barangay Location</p>
+          <p className="text-[10px] text-[#8b949e] font-medium mt-0.5">
             {coords
               ? `${barangay}, District V · Quezon City`
               : "Select a specific barangay to pin its location"}
@@ -62,8 +62,8 @@ export default function GeoMap({ barangay, tier }) {
             className="text-[10px] font-bold px-2.5 py-1 rounded-full border"
             style={{
               color: tierMeta.fill,
-              backgroundColor: tierMeta.ring + "55",
-              borderColor: tierMeta.ring,
+              backgroundColor: tierMeta.ring,
+              borderColor: tierMeta.fill + "44",
             }}
           >
             {tierMeta.label}
@@ -128,8 +128,8 @@ export default function GeoMap({ barangay, tier }) {
               center={DISTRICT_V_CENTER}
               radius={14}
               pathOptions={{
-                fillColor: "#94A3B8",
-                color: "#CBD5E1",
+                fillColor: "#475569",
+                color: "#64748b",
                 weight: 2,
                 fillOpacity: 0.3,
                 opacity: 0.6,
@@ -147,12 +147,12 @@ export default function GeoMap({ barangay, tier }) {
       </div>
 
       {/* Footer */}
-      <div className="px-5 py-2.5 border-t border-slate-100 flex items-center justify-between">
-        <span className="text-[9px] text-slate-400">© OpenStreetMap contributors</span>
-        <span className="flex items-center gap-1.5 text-[10px] font-medium text-slate-400">
+      <div className="px-5 py-2.5 border-t border-white/8 flex items-center justify-between">
+        <span className="text-[9px] text-[#8b949e]">© OpenStreetMap contributors</span>
+        <span className="flex items-center gap-1.5 text-[10px] font-medium text-[#8b949e]">
           <span
             className="w-2.5 h-2.5 rounded-full inline-block"
-            style={{ backgroundColor: coords ? tierMeta.fill : "#94A3B8" }}
+            style={{ backgroundColor: coords ? tierMeta.fill : "#475569" }}
           />
           {coords ? `${barangay} · ${tierMeta.label}` : "District V · Quezon City"}
         </span>
