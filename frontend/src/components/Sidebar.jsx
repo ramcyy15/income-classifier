@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ScanSearch, History, Info } from "lucide-react";
+import { ScanSearch, History, Server, Info } from "lucide-react";
 import NavInfoModal from "./NavInfoModal";
 import logo from "../assets/logo.png";
+import { useServerHealth } from "../context/ServerHealthContext";
 
 const navItems = [
   { id: "classifier", label: "Classify", icon: ScanSearch },
   { id: "history", label: "History & Compare", icon: History },
+  { id: "system", label: "Cloud & Database", icon: Server },
 ];
 
 // Emil: spring config for layout morph
@@ -14,6 +16,8 @@ const indicatorSpring = { type: "spring", duration: 0.4, bounce: 0.15 };
 
 export default function Sidebar({ activeTab, setActiveTab }) {
   const [infoOpen, setInfoOpen] = useState(null);
+  const { supabaseStatus, serverStatus } = useServerHealth();
+  const isAlert = supabaseStatus === "paused" || serverStatus === "waking";
 
   return (
     <>
@@ -54,6 +58,11 @@ export default function Sidebar({ activeTab, setActiveTab }) {
                     }`}
                   >
                     <Icon className="w-5 h-5" />
+
+                    {/* Alert pip if paused or waking */}
+                    {item.id === "system" && isAlert && (
+                      <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                    )}
 
                     {/* Active indicator — layoutId morph */}
                     {isActive && (

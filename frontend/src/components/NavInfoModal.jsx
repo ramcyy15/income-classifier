@@ -1,6 +1,6 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ScanSearch, History, CheckCircle2 } from "lucide-react";
+import { X, ScanSearch, History, CheckCircle2, Server } from "lucide-react";
 
 const PAGE_INFO = {
   classifier: {
@@ -38,6 +38,25 @@ const PAGE_INFO = {
       {
         heading: "Analytical CSV Export",
         body: "Export all session records into a standard spreadsheet format for statistical verification and reporting.",
+      },
+    ],
+  },
+  system: {
+    Icon: Server,
+    title: "Cloud Infrastructure & Database Status",
+    tagline: "Render Container Telemetry & Supabase Recovery",
+    bullets: [
+      {
+        heading: "Render Cloud ML Cold-Start Telemetry",
+        body: "Tracks the live allocation, Uvicorn service boot, and RAM loading of the Scikit-Learn stacking ensemble on Render's free tier.",
+      },
+      {
+        heading: "Supabase Database Health & Unpause",
+        body: "Monitors the state of the PostgreSQL database instance. If paused due to free-tier inactivity, provides direct 1-click links to resume.",
+      },
+      {
+        heading: "Offline Model Independence",
+        body: "Even if Supabase is hibernated, District V datasets and ML models run locally inside the application bundle with zero downtime.",
       },
     ],
   },

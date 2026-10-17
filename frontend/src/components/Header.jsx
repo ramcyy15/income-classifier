@@ -1,15 +1,10 @@
 import React, { useState } from 'react';
-import { Sparkles, Server } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import BotInfoModal from './BotInfoModal';
 import kalingaLogo from '../assets/KalingaBot AI.png';
-import { useServerHealth } from '../context/ServerHealthContext';
 
 export default function Header() {
   const [botModalOpen, setBotModalOpen] = useState(false);
-  const { status, secondsElapsed, supabaseStatus, openGateway } = useServerHealth();
-
-  const isReady = status === 'ready';
-  const isSupabasePaused = supabaseStatus === 'paused';
 
   return (
     <>
@@ -24,56 +19,6 @@ export default function Header() {
         </div>
 
         <div className="flex items-center gap-2.5">
-          {/* Supabase Status Pill */}
-          <button
-            onClick={() => openGateway('supabase')}
-            className={`flex items-center gap-1.5 py-1.5 px-3 neu-btn rounded-xl text-xs font-semibold cursor-pointer transition-transform active:scale-95 ${
-              isSupabasePaused ? 'text-amber-800' : 'text-slate-700'
-            }`}
-            title="Supabase Database Status. Click to view details."
-          >
-            <span
-              className={`w-2 h-2 rounded-full ${
-                isSupabasePaused ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'
-              }`}
-            />
-            <span className="font-mono text-[11px] hidden md:inline">
-              {isSupabasePaused ? 'DB Paused' : 'DB Online'}
-            </span>
-          </button>
-
-          {/* Server Connection Status Badge */}
-          <button
-            onClick={() => openGateway('server')}
-            className={`flex items-center gap-2 py-1.5 px-3 neu-btn rounded-xl text-xs font-semibold cursor-pointer transition-transform active:scale-95 ${
-              isReady ? 'text-slate-700' : 'text-amber-800'
-            }`}
-            title={isReady ? 'Cloud backend is online and ready' : 'Render server is waking up. Click for full telemetry.'}
-          >
-            <span className="relative flex h-2 w-2">
-              {isReady ? (
-                <>
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                </>
-              ) : (
-                <>
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                </>
-              )}
-            </span>
-            <span className="font-mono text-[11px] hidden sm:inline">
-              {isReady ? (
-                <span className="text-emerald-700 font-semibold">Engine Ready</span>
-              ) : (
-                <span className="text-amber-700 font-semibold">
-                  Waking ({secondsElapsed}s)
-                </span>
-              )}
-            </span>
-          </button>
-
           {/* KalingaBot Badge Button - Neumorphic soft button */}
           <button
             onClick={() => setBotModalOpen(true)}
