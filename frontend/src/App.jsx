@@ -62,21 +62,6 @@ function MainAppLayout() {
                 <HistoryView onNavigateToClassifier={() => setActiveTab('classifier')} />
               </motion.div>
             )}
-            {activeTab === 'system' && (
-              <motion.div
-                key="system"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
-                className="h-full"
-              >
-                <SystemPage
-                  isFullScreen={false}
-                  onEnterApp={() => setActiveTab('classifier')}
-                />
-              </motion.div>
-            )}
           </AnimatePresence>
         </main>
       </div>
