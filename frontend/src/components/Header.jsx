@@ -6,9 +6,10 @@ import { useServerHealth } from '../context/ServerHealthContext';
 
 export default function Header() {
   const [botModalOpen, setBotModalOpen] = useState(false);
-  const { status, secondsElapsed, isMinimized, setIsMinimized, setIsDismissed } = useServerHealth();
+  const { status, secondsElapsed, supabaseStatus, openGateway } = useServerHealth();
 
   const isReady = status === 'ready';
+  const isSupabasePaused = supabaseStatus === 'paused';
 
   return (
     <>
@@ -22,17 +23,32 @@ export default function Header() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
+          {/* Supabase Status Pill */}
+          <button
+            onClick={() => openGateway('supabase')}
+            className={`flex items-center gap-1.5 py-1.5 px-3 neu-btn rounded-xl text-xs font-semibold cursor-pointer transition-transform active:scale-95 ${
+              isSupabasePaused ? 'text-amber-800' : 'text-slate-700'
+            }`}
+            title="Supabase Database Status. Click to view details."
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                isSupabasePaused ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'
+              }`}
+            />
+            <span className="font-mono text-[11px] hidden md:inline">
+              {isSupabasePaused ? 'DB Paused' : 'DB Online'}
+            </span>
+          </button>
+
           {/* Server Connection Status Badge */}
           <button
-            onClick={() => {
-              setIsDismissed(false);
-              setIsMinimized(false);
-            }}
+            onClick={() => openGateway('server')}
             className={`flex items-center gap-2 py-1.5 px-3 neu-btn rounded-xl text-xs font-semibold cursor-pointer transition-transform active:scale-95 ${
               isReady ? 'text-slate-700' : 'text-amber-800'
             }`}
-            title={isReady ? 'Cloud backend is online and ready' : 'Render server is waking up. Click for full details.'}
+            title={isReady ? 'Cloud backend is online and ready' : 'Render server is waking up. Click for full telemetry.'}
           >
             <span className="relative flex h-2 w-2">
               {isReady ? (
@@ -49,7 +65,7 @@ export default function Header() {
             </span>
             <span className="font-mono text-[11px] hidden sm:inline">
               {isReady ? (
-                <span className="text-emerald-700 font-semibold">Server Ready</span>
+                <span className="text-emerald-700 font-semibold">Engine Ready</span>
               ) : (
                 <span className="text-amber-700 font-semibold">
                   Waking ({secondsElapsed}s)

@@ -1,16 +1,27 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
-import { checkServerHealth } from "../services/api";
+import { checkServerHealth, checkSupabaseHealth } from "../services/api";
 
 const ServerHealthContext = createContext(null);
 
 export function ServerHealthProvider({ children }) {
-  // Status: 'probing' | 'waking' | 'ready' | 'offline'
-  const [status, setStatus] = useState("probing");
+  // Server Status: 'probing' | 'waking' | 'ready' | 'offline'
+  const [serverStatus, setServerStatus] = useState("probing");
+  // Supabase Status: 'checking' | 'active' | 'paused' | 'unconfigured'
+  const [supabaseStatus, setSupabaseStatus] = useState("checking");
+  const [supabaseData, setSupabaseData] = useState({
+    project_ref: "vcpxuhvbiqghdweagiaa",
+    dashboard_url: "https://supabase.com/dashboard/project/vcpxuhvbiqghdweagiaa",
+  });
+
   const [secondsElapsed, setSecondsElapsed] = useState(0);
   const [lastPingTime, setLastPingTime] = useState(null);
-  const [isDismissed, setIsDismissed] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
   const [responseTimeMs, setResponseTimeMs] = useState(null);
+
+  // Gateway (Full-Screen takeover) state:
+  // Show by default on load if waking or probing, unless user explicitly clicked "Continue to App"
+  const [isBypassed, setIsBypassed] = useState(false);
+  const [isGatewayOpen, setIsGatewayOpen] = useState(true);
+  const [gatewayTab, setGatewayTab] = useState("server"); // "server" | "supabase"
 
   const timerRef = useRef(null);
   const startTimeRef = useRef(null);
@@ -35,39 +46,78 @@ export function ServerHealthProvider({ children }) {
     }
   }, []);
 
-  const pingServer = useCallback(async (isManualRetry = false) => {
+  // Ping Supabase independently
+  const pingSupabase = useCallback(async () => {
+    setSupabaseStatus("checking");
+    try {
+      const data = await checkSupabaseHealth();
+      if (data && data.status === "active") {
+        setSupabaseStatus("active");
+      } else {
+        setSupabaseStatus("paused");
+      }
+      if (data) {
+        setSupabaseData((prev) => ({
+          ...prev,
+          ...data,
+          dashboard_url: data.dashboard_url || "https://supabase.com/dashboard/project/vcpxuhvbiqghdweagiaa",
+          project_ref: data.project_ref || "vcpxuhvbiqghdweagiaa",
+        }));
+      }
+      return data;
+    } catch (err) {
+      setSupabaseStatus("paused");
+      return { status: "paused" };
+    }
+  }, []);
+
+  // Main Backend Server Ping
+  const pingServer = useCallback(async (isManual = false) => {
     if (probeAbortRef.current) {
       probeAbortRef.current.abort();
     }
     const controller = new AbortController();
     probeAbortRef.current = controller;
 
-    setStatus((prev) => (prev === "ready" && !isManualRetry ? "ready" : "probing"));
+    setServerStatus((prev) => (prev === "ready" && !isManual ? "ready" : "probing"));
     startTimer();
     const pingStart = Date.now();
 
-    // If server takes longer than 2.2 seconds to reply, it's definitely waking from sleep
-    const wakeThresholdTimeout = setTimeout(() => {
-      setStatus("waking");
-    }, 2200);
+    // If server takes longer than 2.0s, switch to waking
+    const wakeTimer = setTimeout(() => {
+      setServerStatus("waking");
+    }, 2000);
 
-    // Repeated poll interval while waking (every 3 seconds)
     let isFinished = false;
 
     const attempt = async () => {
       try {
         const data = await checkServerHealth();
-        clearTimeout(wakeThresholdTimeout);
+        clearTimeout(wakeTimer);
         stopTimer();
         isFinished = true;
         setResponseTimeMs(Date.now() - pingStart);
         setLastPingTime(new Date());
-        setStatus("ready");
+        setServerStatus("ready");
+
+        // If gateway is open and server just became ready, auto-dismiss to dashboard after smooth delay
+        setTimeout(() => {
+          setIsGatewayOpen(false);
+        }, 1200);
+
+        // Also check supabase if included in response
+        if (data && data.supabase) {
+          setSupabaseData((prev) => ({ ...prev, ...data.supabase }));
+        }
+
+        // Trigger background check of supabase
+        pingSupabase();
+
         return data;
       } catch (err) {
         if (!isFinished) {
-          setStatus("waking");
-          // Retry after delay while container is starting
+          setServerStatus("waking");
+          // Re-attempt every 3 seconds while booting
           setTimeout(() => {
             if (!isFinished) attempt();
           }, 3000);
@@ -76,60 +126,57 @@ export function ServerHealthProvider({ children }) {
     };
 
     attempt();
-  }, [startTimer, stopTimer]);
+  }, [startTimer, stopTimer, pingSupabase]);
 
   useEffect(() => {
-    // Proactively ping server as soon as the app mounts
     pingServer();
+    pingSupabase();
 
     return () => {
       stopTimer();
-      if (probeAbortRef.current) {
-        probeAbortRef.current.abort();
-      }
+      if (probeAbortRef.current) probeAbortRef.current.abort();
     };
-  }, [pingServer, stopTimer]);
+  }, [pingServer, pingSupabase, stopTimer]);
 
-  // Compute progress percentage with realistic ease (asymptote to 92% until finished)
-  // Most Render cold starts take ~25 to 35 seconds
-  const progressPercent = status === "ready"
+  const openGateway = useCallback((tab = "server") => {
+    setGatewayTab(tab);
+    setIsGatewayOpen(true);
+    setIsBypassed(false);
+  }, []);
+
+  const closeGateway = useCallback(() => {
+    setIsGatewayOpen(false);
+  }, []);
+
+  const bypassToApp = useCallback(() => {
+    setIsBypassed(true);
+    setIsGatewayOpen(false);
+  }, []);
+
+  // Compute smooth progress percentage
+  const progressPercent = serverStatus === "ready"
     ? 100
     : Math.min(94, Math.round(100 * (1 - Math.exp(-secondsElapsed / 14))));
-
-  // Realistic milestone stages based on elapsed cold start time
-  let stageIndex = 0;
-  if (status === "ready") {
-    stageIndex = 3;
-  } else if (secondsElapsed < 6) {
-    stageIndex = 0; // Container spin-up
-  } else if (secondsElapsed < 18) {
-    stageIndex = 1; // Python & FastAPI runtime initialization
-  } else {
-    stageIndex = 2; // Loading ML models into RAM
-  }
-
-  const stages = [
-    { label: "Container Spin-up", desc: "Waking dormant cloud instance on Render" },
-    { label: "Runtime Boot", desc: "Starting FastAPI & Python analytics engine" },
-    { label: "Model Memory Cache", desc: "Loading Scikit-Learn stacking ensemble into RAM" },
-    { label: "Online & Ready", desc: "Instantaneous sub-second inference active" },
-  ];
 
   return (
     <ServerHealthContext.Provider
       value={{
-        status,
+        status: serverStatus, // 'probing' | 'waking' | 'ready' | 'offline'
+        serverStatus,
+        supabaseStatus,
+        supabaseData,
         secondsElapsed,
         progressPercent,
-        stages,
-        stageIndex,
         lastPingTime,
         responseTimeMs,
-        isDismissed,
-        setIsDismissed,
-        isMinimized,
-        setIsMinimized,
-        retryPing: () => pingServer(true),
+        isGatewayOpen: isGatewayOpen && !isBypassed,
+        gatewayTab,
+        setGatewayTab,
+        openGateway,
+        closeGateway,
+        bypassToApp,
+        retryServer: () => pingServer(true),
+        retrySupabase: () => pingSupabase(),
       }}
     >
       {children}

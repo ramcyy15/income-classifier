@@ -10,6 +10,22 @@ export async function checkServerHealth() {
   return res.json();
 }
 
+export async function checkSupabaseHealth() {
+  try {
+    const res = await fetch(`${API_BASE}/health/supabase`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`Supabase probe returned ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    return {
+      configured: true,
+      status: "paused",
+      project_ref: "vcpxuhvbiqghdweagiaa",
+      error: err.message,
+      dashboard_url: "https://supabase.com/dashboard/project/vcpxuhvbiqghdweagiaa"
+    };
+  }
+}
+
 export async function fetchOverview() {
   const res = await fetch(`${API_BASE}/overview`);
   if (!res.ok) throw new Error('Failed to load overview data');

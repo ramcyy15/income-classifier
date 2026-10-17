@@ -4,7 +4,7 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import ClassificationCenter from './components/ClassificationCenter';
 import HistoryView from './components/HistoryView';
-import ServerWarmupAlert from './components/ServerWarmupAlert';
+import SystemGateway from './components/SystemGateway';
 import { ServerHealthProvider } from './context/ServerHealthContext';
 
 export default function App() {
@@ -12,6 +12,9 @@ export default function App() {
 
   return (
     <ServerHealthProvider>
+      {/* Full-Screen Anti-Slop System Gateway for Waking State & Supabase Paused State */}
+      <SystemGateway />
+
       <div className="flex h-screen w-screen overflow-hidden bg-[#EEF2F6] font-sans text-slate-900 antialiased">
         {/* Sleek Left Sidebar */}
         <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -23,11 +26,6 @@ export default function App() {
 
           {/* Dynamic Scrollable Body */}
           <main className="flex-1 overflow-y-auto px-8 py-6">
-            <div className="max-w-5xl mx-auto">
-              {/* Server Warmup & Status Alert */}
-              <ServerWarmupAlert />
-            </div>
-
             <AnimatePresence mode="wait">
               {activeTab === 'classifier' && (
                 <motion.div

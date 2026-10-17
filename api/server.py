@@ -40,6 +40,19 @@ if not GEMINI_KEY:
 GEMINI_CLIENT = genai.Client(api_key=GEMINI_KEY) if GEMINI_KEY else None
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 
+# Load Supabase Configuration
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+if not SUPABASE_URL:
+    env_file = BASE / ".env"
+    if env_file.exists():
+        for line in env_file.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line.startswith("SUPABASE_URL="):
+                SUPABASE_URL = line.split("=", 1)[1].strip().strip('"').strip("'")
+            elif line.startswith("SUPABASE_KEY="):
+                SUPABASE_KEY = line.split("=", 1)[1].strip().strip('"').strip("'")
+
 PROMPT_BRIEF_TEMPLATE = """You are a Philippine social welfare and poverty alleviation policy analyst advising the Quezon City Local Government Unit (District V).
 Based on the real demographic, economic, and machine learning indicators below, produce an evidence-based Government Policy Brief with actionable agency recommendations.
 
@@ -205,6 +218,43 @@ def _warmup_models_background():
     except Exception:
         pass
 
+def check_supabase_health_sync():
+    if not SUPABASE_URL:
+        return {
+            "configured": False,
+            "status": "unconfigured",
+            "project_ref": "vcpxuhvbiqghdweagiaa",
+            "dashboard_url": "https://supabase.com/dashboard/project/vcpxuhvbiqghdweagiaa"
+        }
+    project_ref = "vcpxuhvbiqghdweagiaa"
+    if "//" in SUPABASE_URL:
+        try:
+            project_ref = SUPABASE_URL.split("//")[1].split(".")[0]
+        except Exception:
+            pass
+    import urllib.request
+    try:
+        req = urllib.request.Request(
+            f"{SUPABASE_URL.rstrip('/')}/rest/v1/",
+            headers={"apikey": SUPABASE_KEY or ""}
+        )
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            return {
+                "configured": True,
+                "status": "active",
+                "code": resp.status,
+                "project_ref": project_ref,
+                "dashboard_url": f"https://supabase.com/dashboard/project/{project_ref}"
+            }
+    except Exception as e:
+        return {
+            "configured": True,
+            "status": "paused",
+            "project_ref": project_ref,
+            "error": str(e),
+            "dashboard_url": f"https://supabase.com/dashboard/project/{project_ref}"
+        }
+
 @app.get("/api/health")
 @app.get("/health")
 def health():
@@ -218,8 +268,17 @@ def health():
             "barangay_model": "barangay_model" in _CACHE,
             "individual_model": "individual_model" in _CACHE,
             "ensemble_model": "model" in _CACHE,
+        },
+        "supabase": {
+            "configured": bool(SUPABASE_URL),
+            "project_ref": "vcpxuhvbiqghdweagiaa",
+            "dashboard_url": "https://supabase.com/dashboard/project/vcpxuhvbiqghdweagiaa",
         }
     }
+
+@app.get("/api/health/supabase")
+def supabase_health():
+    return check_supabase_health_sync()
 
 def get_metrics():
     accuracy = 0.4994
