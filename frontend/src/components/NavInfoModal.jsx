@@ -13,10 +13,6 @@ const PAGE_INFO = {
         body: "Analyzes 10 key PSA indicators (economic, utilities, human capital) to assign a community to Level 1 (Low), Level 2 (Middle), or Level 3 (High).",
       },
       {
-        heading: "Individual Family Classifier (Household Scale)",
-        body: "Evaluates single-household indicators (per-capita income, dependents, education participation, 4Ps status) against DSWD SWDI thresholds.",
-      },
-      {
         heading: "Model Explainability & Decision Drivers",
         body: "Visualizes the model's softmax probability distribution alongside localized feature importances indicating the primary drivers of welfare classification.",
       },

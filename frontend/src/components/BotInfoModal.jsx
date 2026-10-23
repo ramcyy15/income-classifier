@@ -16,7 +16,7 @@ export default function BotInfoModal({ isOpen, onClose }) {
       badge: "R",
       badgeLabel: "Retrieve",
       title: "Pulls the real numbers first",
-      desc: "When you enter a community or family profile, KalingaBot never invents data. He queries the District V empirical dataset (4,500+ households) and executes the Stacking Ensemble ML model to extract the verified SWDI/PSA tier.",
+      desc: "When you enter a community profile, KalingaBot never invents data. He queries the District V empirical dataset (4,500+ surveyed records across 14 barangays) and executes the Stacking Ensemble ML model to extract the verified SWDI/PSA tier.",
       tag: "Verified Local Grounding",
       color: "bg-blue-600",
     },

@@ -1,10 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
-  History, Trash2, Download, ArrowRight, ArrowUpDown,
-  CheckCircle2, Calendar, AlertCircle
+  History,
+  Trash2,
+  Download,
+  ArrowRight,
+  ArrowUpDown,
+  Building2,
 } from "lucide-react";
-import { getClassificationHistory, clearClassificationHistory } from "../utils/historyStore";
+import {
+  getClassificationHistory,
+  clearClassificationHistory,
+} from "../utils/historyStore";
 import ComparisonModal from "./ComparisonModal";
 
 const TIER_META = {
@@ -32,7 +39,10 @@ const formatTimestamp = (isoString) => {
   if (!isoString) return "—";
   const date = new Date(isoString);
   const day = date.getDate();
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  ];
   const month = months[date.getMonth()];
   const hours = String(date.getHours()).padStart(2, "0");
   const minutes = String(date.getMinutes()).padStart(2, "0");
@@ -43,12 +53,13 @@ const formatTimestamp = (isoString) => {
 export default function HistoryView({ onNavigateToClassifier }) {
   const [history, setHistory] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [filterType, setFilterType] = useState("all");
   const [showCompareModal, setShowCompareModal] = useState(false);
-  const [notice, setNotice] = useState(null);
 
   const loadData = () => {
-    setHistory(getClassificationHistory());
+    // Filter specifically for barangay records
+    const all = getClassificationHistory();
+    const barangayOnly = all.filter((item) => !item.type || item.type === "barangay");
+    setHistory(barangayOnly);
   };
 
   useEffect(() => {
@@ -58,91 +69,65 @@ export default function HistoryView({ onNavigateToClassifier }) {
   }, []);
 
   const handleClear = () => {
-    if (window.confirm("Clear all recorded classification history records?")) {
+    if (window.confirm("Clear all recorded barangay classification history records?")) {
       clearClassificationHistory();
       setSelectedIds([]);
-      setNotice(null);
     }
   };
 
-  const selectedType = selectedIds.length > 0
-    ? history.find((h) => h.id === selectedIds[0])?.type
-    : null;
-
   const toggleSelect = (id) => {
-    const clickedItem = history.find((h) => h.id === id);
-    if (!clickedItem) return;
-
     if (selectedIds.includes(id)) {
       setSelectedIds(selectedIds.filter((item) => item !== id));
-      setNotice(null);
       return;
     }
 
     if (selectedIds.length === 0) {
       setSelectedIds([id]);
-      setNotice(null);
       return;
     }
 
     if (selectedIds.length === 1) {
-      const firstItem = history.find((h) => h.id === selectedIds[0]);
-      if (firstItem && firstItem.type !== clickedItem.type) {
-        // Strict requirement: Only barangay -> barangay and household -> household
-        setSelectedIds([id]);
-        setNotice(
-          `Comparison is only allowed between matching types (${firstItem.type === "barangay" ? "Barangay ↔ Barangay" : "Household ↔ Household"}). Switched selection to ${clickedItem.target}.`
-        );
-        return;
-      }
       setSelectedIds([...selectedIds, id]);
-      setNotice(null);
       return;
     }
 
-    // When already 2 selected, shift selection
-    const firstItem = history.find((h) => h.id === selectedIds[1]);
-    if (firstItem && firstItem.type !== clickedItem.type) {
-      setSelectedIds([id]);
-      setNotice(
-        `Switched selection to ${clickedItem.type === "barangay" ? "Barangay" : "Household"} (${clickedItem.target}).`
-      );
-    } else {
-      setSelectedIds([selectedIds[1], id]);
-      setNotice(null);
-    }
+    // Shift selection when 2 are already selected
+    setSelectedIds([selectedIds[1], id]);
   };
 
   const handleExportCSV = () => {
     if (history.length === 0) return;
-    const headers = ["Ordinal", "Timestamp", "Type", "Target", "Predicted Tier", "Confidence (%)", "Top Driver"];
+    const headers = [
+      "Ordinal",
+      "Timestamp",
+      "Barangay Jurisdiction",
+      "Predicted Tier",
+      "Confidence (%)",
+      "Dominant Driver",
+    ];
     const rows = history.map((item, idx) => [
       `"#${history.length - idx}"`,
       `"${formatTimestamp(item.timestamp)}"`,
-      `"${item.type}"`,
       `"${item.target}"`,
       `"${item.predicted_class}"`,
       item.confidence || "N/A",
       `"${item.top_feature || "N/A"}"`,
     ]);
 
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `district_v_audit_ledger_${Date.now()}.csv`);
+    link.setAttribute("download", `district_v_barangay_audit_${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const filteredHistory = history.filter((item) => {
-    if (filterType === "all") return true;
-    return item.type === filterType;
-  });
-
+  const canLaunchCompare = selectedIds.length === 2;
   const compareItems = history.filter((item) => selectedIds.includes(item.id));
-  const canLaunchCompare = compareItems.length === 2 && compareItems[0].type === compareItems[1].type;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
@@ -154,11 +139,11 @@ export default function HistoryView({ onNavigateToClassifier }) {
               <History className="w-4 h-4" />
             </span>
             <h1 className="text-base font-bold tracking-[-0.01em] text-slate-900">
-              Classification Audit Trail
+              Barangay Classification Audit Trail
             </h1>
           </div>
           <p className="text-[11px] text-slate-500 font-medium">
-            Forensic audit ledger: track model inference outputs, compare dual profiles, and export CSV archives.
+            Forensic audit ledger: track barangay model inferences, compare dual profiles, and export CSV archives.
           </p>
         </div>
 
@@ -182,33 +167,11 @@ export default function HistoryView({ onNavigateToClassifier }) {
         </div>
       </div>
 
-      {/* Filter Tabs & Comparison Bar */}
+      {/* Comparison Action Bar & Counter */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center neu-inset p-1.5 rounded-2xl gap-1.5">
-          <button
-            onClick={() => setFilterType("all")}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-              filterType === "all" ? "neu-surface-sm text-slate-900 font-bold" : "text-slate-500 hover:text-slate-800"
-            }`}
-          >
-            All Logs ({history.length})
-          </button>
-          <button
-            onClick={() => setFilterType("barangay")}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-              filterType === "barangay" ? "neu-surface-sm text-slate-900 font-bold" : "text-slate-500 hover:text-slate-800"
-            }`}
-          >
-            Barangay ({history.filter((h) => h.type === "barangay").length})
-          </button>
-          <button
-            onClick={() => setFilterType("individual")}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-              filterType === "individual" ? "neu-surface-sm text-slate-900 font-bold" : "text-slate-500 hover:text-slate-800"
-            }`}
-          >
-            Household ({history.filter((h) => h.type === "individual").length})
-          </button>
+        <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+          <Building2 className="w-4 h-4 text-indigo-600" />
+          <span>Recorded Barangay Inferences ({history.length})</span>
         </div>
 
         {/* Selected comparison action badge */}
@@ -216,14 +179,14 @@ export default function HistoryView({ onNavigateToClassifier }) {
           <div className="text-right">
             <span className="text-xs font-medium text-slate-600 block">
               {selectedIds.length === 0 ? (
-                <span>Compare: Select 2 matching profiles</span>
+                <span>Compare: Select 2 barangays</span>
               ) : selectedIds.length === 1 ? (
                 <span>
-                  Select another <strong className="text-indigo-600">{selectedType === "barangay" ? "Barangay" : "Household"}</strong>
+                  Select another <strong className="text-indigo-600">Barangay</strong>
                 </span>
               ) : (
                 <span>
-                  Comparing 2 <strong className="text-emerald-700">{selectedType === "barangay" ? "Barangays" : "Households"}</strong>
+                  Comparing 2 <strong className="text-emerald-700">Barangays</strong>
                 </span>
               )}
             </span>
@@ -231,11 +194,8 @@ export default function HistoryView({ onNavigateToClassifier }) {
 
           {selectedIds.length > 0 && (
             <button
-              onClick={() => {
-                setSelectedIds([]);
-                setNotice(null);
-              }}
-              className="text-[11px] text-slate-400 hover:text-slate-600 px-2 py-1 rounded-lg hover:bg-slate-200/50"
+              onClick={() => setSelectedIds([])}
+              className="text-[11px] text-slate-400 hover:text-slate-600 px-2 py-1 rounded-lg hover:bg-slate-200/50 cursor-pointer"
               title="Reset selection"
             >
               Reset
@@ -245,7 +205,7 @@ export default function HistoryView({ onNavigateToClassifier }) {
           <button
             disabled={!canLaunchCompare}
             onClick={() => setShowCompareModal(true)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-transform active:scale-95 cursor-pointer ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-transform active:scale-95 ${
               canLaunchCompare
                 ? "neu-btn-primary text-white shadow-md cursor-pointer"
                 : "neu-btn opacity-50 text-slate-400 cursor-not-allowed"
@@ -253,50 +213,35 @@ export default function HistoryView({ onNavigateToClassifier }) {
           >
             <ArrowUpDown className="w-3.5 h-3.5" />
             <span>
-              {canLaunchCompare
-                ? `Compare ${selectedType === "barangay" ? "Barangays" : "Households"}`
-                : "Launch Comparison"}
+              {canLaunchCompare ? "Compare Barangays" : "Launch Comparison"}
             </span>
           </button>
         </div>
       </div>
 
-      {/* Helpful Toast / Notice if user attempts mismatched selection */}
-      {notice && (
-        <motion.div
-          initial={{ opacity: 0, y: -6 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="neu-surface-sm rounded-2xl px-4 py-2.5 text-xs text-amber-800 bg-amber-50/80 border border-amber-200 flex items-center justify-between gap-2"
-        >
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-            <span>{notice}</span>
+      {/* Main Records Table or Empty State */}
+      {history.length === 0 ? (
+        <div className="neu-surface rounded-3xl p-12 text-center flex flex-col items-center justify-center space-y-4">
+          <div className="w-14 h-14 rounded-2xl neu-inset flex items-center justify-center text-slate-400">
+            <Building2 className="w-7 h-7" />
           </div>
-          <button
-            onClick={() => setNotice(null)}
-            className="text-amber-600 hover:text-amber-900 text-xs font-bold px-1"
-          >
-            ✕
-          </button>
-        </motion.div>
-      )}
-
-      {/* Audit Ledger Table Container */}
-      {filteredHistory.length === 0 ? (
-        <div className="neu-surface rounded-3xl p-12 text-center">
-          <div className="w-12 h-12 rounded-2xl neu-inset-sm flex items-center justify-center mx-auto mb-3 text-slate-400">
-            <History className="w-6 h-6" />
+          <div className="space-y-1">
+            <h3 className="text-sm font-bold text-slate-800">
+              No Barangay Inferences Recorded
+            </h3>
+            <p className="text-xs text-slate-500 max-w-sm">
+              Run an inference in the Barangay Classifier and records will automatically appear in this audit ledger.
+            </p>
           </div>
-          <h3 className="text-sm font-semibold text-slate-800">No Classification Runs Yet</h3>
-          <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto font-normal">
-            Run an inference in the Barangay or Household classifier and records will automatically appear in this audit ledger.
-          </p>
-          <button
-            onClick={onNavigateToClassifier}
-            className="mt-4 inline-flex items-center gap-2 px-4 py-2 neu-btn-primary text-white text-xs font-semibold rounded-xl cursor-pointer"
-          >
-            Go to Classifier <ArrowRight className="w-3.5 h-3.5" />
-          </button>
+          {onNavigateToClassifier && (
+            <button
+              onClick={onNavigateToClassifier}
+              className="mt-2 flex items-center gap-2 px-4 py-2 neu-btn-primary text-white text-xs font-semibold rounded-xl cursor-pointer"
+            >
+              <span>Go to Barangay Classifier</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       ) : (
         <div className="neu-surface rounded-3xl overflow-hidden">
@@ -306,8 +251,7 @@ export default function HistoryView({ onNavigateToClassifier }) {
               <span>#</span>
             </div>
             <div className="col-span-3">TIMESTAMP</div>
-            <div className="col-span-3">TARGET JURISDICTION</div>
-            <div className="col-span-1">TYPE</div>
+            <div className="col-span-4">BARANGAY JURISDICTION</div>
             <div className="col-span-2">PREDICTED TIER</div>
             <div className="col-span-1 text-right">CONF</div>
             <div className="col-span-1 text-right">DRIVER</div>
@@ -315,29 +259,25 @@ export default function HistoryView({ onNavigateToClassifier }) {
 
           {/* Table Rows with Staggered Motion */}
           <div className="divide-y divide-slate-100">
-            {filteredHistory.map((item, idx) => {
+            {history.map((item, idx) => {
               const isSelected = selectedIds.includes(item.id);
-              const ordinal = history.length - history.findIndex((h) => h.id === item.id);
+              const ordinal = history.length - idx;
               const tierInfo = TIER_META[item.predicted_class] || TIER_META.Middle;
-              const isTypeMismatched = selectedIds.length === 1 && item.type !== selectedType;
 
               return (
                 <motion.div
                   key={item.id}
                   initial={{ opacity: 0, x: -6 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.25, delay: idx * 0.03, ease: [0.23, 1, 0.32, 1] }}
+                  transition={{
+                    duration: 0.25,
+                    delay: idx * 0.03,
+                    ease: [0.23, 1, 0.32, 1],
+                  }}
                   onClick={() => toggleSelect(item.id)}
-                  title={
-                    isTypeMismatched
-                      ? `Click to switch comparison to ${item.type === "barangay" ? "Barangays" : "Households"}`
-                      : ""
-                  }
                   className={`px-5 py-3.5 transition-all cursor-pointer ${
                     isSelected
                       ? "bg-indigo-50/40 border-l-4 border-l-indigo-600 pl-[17px]"
-                      : isTypeMismatched
-                      ? "opacity-50 hover:opacity-80 hover:bg-slate-50 border-l-4 border-l-transparent"
                       : "hover:bg-slate-50/80 border-l-4 border-l-transparent"
                   }`}
                 >
@@ -361,27 +301,9 @@ export default function HistoryView({ onNavigateToClassifier }) {
                       {formatTimestamp(item.timestamp)}
                     </div>
 
-                    {/* Target */}
-                    <div className="col-span-3 font-semibold text-slate-900 truncate flex items-center gap-2">
+                    {/* Target Barangay */}
+                    <div className="col-span-4 font-semibold text-slate-900 truncate flex items-center gap-2">
                       <span className="truncate">{item.target}</span>
-                      {isTypeMismatched && (
-                        <span className="text-[9px] font-mono text-slate-400 border border-slate-200 px-1.5 py-0.2 rounded whitespace-nowrap">
-                          different type
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Type Badge */}
-                    <div className="col-span-1">
-                      <span
-                        className={`text-[9px] font-mono uppercase tracking-[0.1em] px-2 py-0.5 rounded-md font-semibold ${
-                          item.type === "barangay"
-                            ? "bg-indigo-50 text-indigo-700 border border-indigo-100"
-                            : "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                        }`}
-                      >
-                        {item.type === "barangay" ? "BRGY" : "INDV"}
-                      </span>
                     </div>
 
                     {/* Tier Indicator */}
@@ -401,44 +323,40 @@ export default function HistoryView({ onNavigateToClassifier }) {
                     </div>
 
                     {/* Top Driver */}
-                    <div className="col-span-1 text-right text-[11px] text-slate-500 truncate" title={item.top_feature}>
+                    <div className="col-span-1 text-right font-mono text-[11px] text-slate-500 truncate">
                       {item.top_feature ? item.top_feature.split(" ")[0] : "—"}
                     </div>
                   </div>
 
-                  {/* Mobile Fallback Card Layout */}
-                  <div className="md:hidden flex flex-col gap-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => {}}
-                          className="w-3.5 h-3.5 rounded text-indigo-600 pointer-events-none"
-                        />
-                        <span className="font-mono text-slate-400 text-xs">#{ordinal}</span>
-                        <h4 className="font-semibold text-slate-900 text-sm">{item.target}</h4>
+                  {/* Mobile Row Card */}
+                  <div className="md:hidden flex items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-2.5">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => {}}
+                        className="w-3.5 h-3.5 rounded text-indigo-600 pointer-events-none"
+                      />
+                      <div>
+                        <div className="font-semibold text-slate-900">
+                          {item.target}
+                        </div>
+                        <div className="font-mono text-[10px] text-slate-400">
+                          #{ordinal} · {formatTimestamp(item.timestamp)}
+                        </div>
                       </div>
-                      <span className={`text-[9px] font-mono px-2 py-0.5 rounded-md font-semibold ${
-                        item.type === "barangay" ? "bg-indigo-50 text-indigo-700" : "bg-emerald-50 text-emerald-700"
-                      }`}>
-                        {item.type === "barangay" ? "BRGY" : "INDV"}
-                      </span>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs text-slate-500">
-                      <div className="flex items-center gap-1.5">
+                    <div className="text-right">
+                      <div className="flex items-center gap-1.5 justify-end">
                         <span className={`w-2 h-2 rounded-full ${tierInfo.dot}`} />
-                        <span className={`font-semibold ${tierInfo.text}`}>{tierInfo.level}</span>
+                        <span className={`font-semibold text-xs ${tierInfo.text}`}>
+                          {tierInfo.level}
+                        </span>
                       </div>
-                      <div className="font-mono font-bold text-slate-800">
-                        {item.confidence ? `${item.confidence}%` : "—"}
+                      <div className="font-mono text-[10px] text-slate-500">
+                        {item.confidence ? `${item.confidence}% conf` : ""}
                       </div>
-                    </div>
-
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono">
-                      <span>{formatTimestamp(item.timestamp)}</span>
-                      {item.top_feature && <span>Driver: {item.top_feature}</span>}
                     </div>
                   </div>
                 </motion.div>
@@ -448,13 +366,15 @@ export default function HistoryView({ onNavigateToClassifier }) {
         </div>
       )}
 
-      {/* Side-by-Side Comparison Modal */}
-      <ComparisonModal
-        isOpen={showCompareModal && compareItems.length === 2}
-        onClose={() => setShowCompareModal(false)}
-        itemA={compareItems[0]}
-        itemB={compareItems[1]}
-      />
+      {/* Comparison Modal */}
+      {showCompareModal && compareItems.length === 2 && (
+        <ComparisonModal
+          isOpen={showCompareModal}
+          onClose={() => setShowCompareModal(false)}
+          itemA={compareItems[0]}
+          itemB={compareItems[1]}
+        />
+      )}
     </div>
   );
 }

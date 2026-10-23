@@ -107,9 +107,13 @@ export default function ComparisonModal({ isOpen, onClose, itemA, itemB }) {
   });
 
   // Filter top 5 key indicators for clean, uncluttered graph
-  const keyIndicatorNames = isBarangay
-    ? ["Avg Monthly Income", "Employed Heads", "Electricity Access", "Permanent Housing", "Informal Settlers"]
-    : ["Monthly Income", "Family Size", "Dependents (0-18)", "Children in School"];
+  const keyIndicatorNames = [
+    "Avg Monthly Income",
+    "Employed Heads",
+    "Electricity Access",
+    "Permanent Housing",
+    "Informal Settlers",
+  ];
 
   const displayedIndicators = showAllMetrics
     ? indicators
@@ -168,7 +172,7 @@ export default function ComparisonModal({ isOpen, onClose, itemA, itemB }) {
                   Side-by-Side Comparison
                 </h2>
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200/80">
-                  {isBarangay ? "Barangay ↔ Barangay" : "Household ↔ Household"}
+                  Barangay Comparison
                 </span>
               </div>
               <p className="text-[11.5px] text-slate-500 font-medium mt-0.5">
