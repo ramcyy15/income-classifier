@@ -8,14 +8,14 @@ import {
   ArrowUpDown,
   Building2,
   Sparkles,
-  ChevronDown,
-  ChevronUp,
+  X,
 } from "lucide-react";
 import {
   getClassificationHistory,
   clearClassificationHistory,
 } from "../utils/historyStore";
 import ComparisonModal from "./ComparisonModal";
+import kalingaLogo from "../assets/KalingaBot AI.png";
 
 const TIER_META = {
   Low: {
@@ -23,19 +23,30 @@ const TIER_META = {
     label: "Survival",
     dot: "bg-red-500",
     text: "text-red-700",
+    badge: "bg-red-50 border-red-200 text-red-700",
   },
   Middle: {
     level: "Level 2",
     label: "Subsistence",
     dot: "bg-amber-500",
     text: "text-amber-700",
+    badge: "bg-amber-50 border-amber-200 text-amber-700",
   },
   High: {
     level: "Level 3",
     label: "Self-Sufficient",
     dot: "bg-emerald-500",
     text: "text-emerald-700",
+    badge: "bg-emerald-50 border-emerald-200 text-emerald-700",
   },
+};
+
+const SECTOR_STYLES = {
+  "Livelihood":        "bg-emerald-50 text-emerald-700 border-emerald-200",
+  "Education":         "bg-blue-50 text-blue-700 border-blue-200",
+  "Housing":           "bg-amber-50 text-amber-700 border-amber-200",
+  "Health":            "bg-rose-50 text-rose-700 border-rose-200",
+  "Financial Support": "bg-indigo-50 text-indigo-700 border-indigo-200",
 };
 
 const formatTimestamp = (isoString) => {
@@ -57,10 +68,9 @@ export default function HistoryView({ onNavigateToClassifier }) {
   const [history, setHistory] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
   const [showCompareModal, setShowCompareModal] = useState(false);
-  const [expandedAiId, setExpandedAiId] = useState(null);
+  const [activeAiModalItem, setActiveAiModalItem] = useState(null);
 
   const loadData = () => {
-    // Filter specifically for barangay records
     const all = getClassificationHistory();
     const barangayOnly = all.filter((item) => !item.type || item.type === "barangay");
     setHistory(barangayOnly);
@@ -76,6 +86,7 @@ export default function HistoryView({ onNavigateToClassifier }) {
     if (window.confirm("Clear all recorded barangay classification history records?")) {
       clearClassificationHistory();
       setSelectedIds([]);
+      setActiveAiModalItem(null);
     }
   };
 
@@ -84,18 +95,14 @@ export default function HistoryView({ onNavigateToClassifier }) {
       setSelectedIds(selectedIds.filter((item) => item !== id));
       return;
     }
-
     if (selectedIds.length === 0) {
       setSelectedIds([id]);
       return;
     }
-
     if (selectedIds.length === 1) {
       setSelectedIds([...selectedIds, id]);
       return;
     }
-
-    // Shift selection when 2 are already selected
     setSelectedIds([selectedIds[1], id]);
   };
 
@@ -147,7 +154,7 @@ export default function HistoryView({ onNavigateToClassifier }) {
             </h1>
           </div>
           <p className="text-[11px] text-slate-500 font-medium">
-            Forensic audit ledger: track barangay model inferences, compare dual profiles, and export CSV archives.
+            Forensic audit ledger: track barangay model inferences, review KalingaBot suggestions, compare dual profiles, and export CSV archives.
           </p>
         </div>
 
@@ -267,6 +274,7 @@ export default function HistoryView({ onNavigateToClassifier }) {
               const isSelected = selectedIds.includes(item.id);
               const ordinal = history.length - idx;
               const tierInfo = TIER_META[item.predicted_class] || TIER_META.Middle;
+              const hasAi = Boolean(item.ai_interpretation || (item.ai_recommendations && item.ai_recommendations.length > 0));
 
               return (
                 <motion.div
@@ -305,21 +313,20 @@ export default function HistoryView({ onNavigateToClassifier }) {
                       {formatTimestamp(item.timestamp)}
                     </div>
 
-                    {/* Target Barangay */}
+                    {/* Target Barangay + AI Button */}
                     <div className="col-span-4 font-semibold text-slate-900 truncate flex items-center gap-2">
                       <span className="truncate">{item.target}</span>
-                      {item.ai_interpretation && (
+                      {hasAi && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setExpandedAiId(expandedAiId === item.id ? null : item.id);
+                            setActiveAiModalItem(item);
                           }}
-                          className="flex-shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-600 hover:bg-indigo-100 transition-colors cursor-pointer"
-                          title="View KalingaBot AI suggestions"
+                          className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-200/80 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 transition-colors cursor-pointer"
+                          title="Open KalingaBot AI Suggestions"
                         >
-                          <Sparkles className="w-2.5 h-2.5" />
-                          <span className="text-[9px] font-bold uppercase tracking-wide">AI</span>
-                          {expandedAiId === item.id ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
+                          <Sparkles className="w-2.5 h-2.5 text-indigo-600" />
+                          <span className="text-[10px] font-bold uppercase tracking-wide">KalingaBot AI</span>
                         </button>
                       )}
                     </div>
@@ -341,44 +348,10 @@ export default function HistoryView({ onNavigateToClassifier }) {
                     </div>
 
                     {/* Top Driver */}
-                    <div className="col-span-1 text-right font-mono text-[11px] text-slate-500 truncate">
+                    <div className="col-span-1 text-right font-mono text-[11px] text-slate-500 truncate" title={item.top_feature}>
                       {item.top_feature ? item.top_feature.split(" ")[0] : "—"}
                     </div>
                   </div>
-
-                  {/* AI Expand Panel */}
-                  <AnimatePresence>
-                    {expandedAiId === item.id && item.ai_interpretation && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
-                        className="overflow-hidden"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <div className="mt-3 mx-1 p-3.5 rounded-2xl bg-indigo-50/60 border border-indigo-100 space-y-2">
-                          <div className="flex items-center gap-1.5 text-[10px] font-bold text-indigo-600 uppercase tracking-wider">
-                            <Sparkles className="w-3 h-3" />
-                            KalingaBot AI Insights
-                          </div>
-                          <p className="text-[11px] text-slate-600 leading-relaxed">{item.ai_interpretation}</p>
-                          {item.ai_recommendations?.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 pt-1">
-                              {item.ai_recommendations.map((rec, ri) => (
-                                <span
-                                  key={ri}
-                                  className="text-[10px] px-2 py-0.5 rounded-full bg-white border border-indigo-200 text-indigo-700 font-semibold"
-                                >
-                                  {rec.name || rec}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
 
                   {/* Mobile Row Card */}
                   <div className="md:hidden flex items-center justify-between gap-3 text-xs">
@@ -390,8 +363,19 @@ export default function HistoryView({ onNavigateToClassifier }) {
                         className="w-3.5 h-3.5 rounded text-indigo-600 pointer-events-none"
                       />
                       <div>
-                        <div className="font-semibold text-slate-900">
-                          {item.target}
+                        <div className="font-semibold text-slate-900 flex items-center gap-1.5">
+                          <span>{item.target}</span>
+                          {hasAi && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveAiModalItem(item);
+                              }}
+                              className="px-1.5 py-0.5 rounded bg-indigo-50 border border-indigo-200 text-indigo-700 text-[9px] font-bold uppercase"
+                            >
+                              AI
+                            </button>
+                          )}
                         </div>
                         <div className="font-mono text-[10px] text-slate-400">
                           #{ordinal} · {formatTimestamp(item.timestamp)}
@@ -417,6 +401,150 @@ export default function HistoryView({ onNavigateToClassifier }) {
           </div>
         </div>
       )}
+
+      {/* ── KalingaBot AI Modal (No Emojis, Clean Neumorphic) ── */}
+      <AnimatePresence>
+        {activeAiModalItem && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md"
+            onClick={() => setActiveAiModalItem(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+              className="neu-glass rounded-3xl max-w-lg w-full border border-white/90 shadow-[0_25px_60px_-15px_rgba(15,23,42,0.3)] flex flex-col max-h-[88vh] overflow-hidden bg-[#EEF2F6]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="px-6 py-4 border-b border-slate-200/80 flex items-center justify-between bg-[#EEF2F6]/80 backdrop-blur-md">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl neu-inset-sm p-1.5 flex items-center justify-center flex-shrink-0">
+                    <img
+                      src={kalingaLogo}
+                      alt="KalingaBot AI"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-bold tracking-tight text-slate-900">
+                        KalingaBot AI Suggestions
+                      </h3>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/80 font-semibold">
+                        Barangay {activeAiModalItem.target}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                      Targeted recommendations based on community PSA indicators
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setActiveAiModalItem(null)}
+                  className="w-8 h-8 rounded-xl neu-btn text-slate-500 hover:text-slate-800 flex items-center justify-center cursor-pointer"
+                  aria-label="Close modal"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 overflow-y-auto space-y-4 bg-[#EEF2F6]">
+                {/* Meta Summary Badge */}
+                <div className="flex items-center justify-between neu-surface-sm p-3 rounded-2xl text-xs">
+                  <div>
+                    <span className="text-[10px] font-mono uppercase text-slate-400 block">
+                      Inferred Tier
+                    </span>
+                    <span className="font-bold text-slate-800">
+                      {TIER_META[activeAiModalItem.predicted_class]?.level || "Level"} · {TIER_META[activeAiModalItem.predicted_class]?.label || ""}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] font-mono uppercase text-slate-400 block">
+                      Confidence
+                    </span>
+                    <span className="font-mono font-bold text-indigo-700">
+                      {activeAiModalItem.confidence ?? 0}%
+                    </span>
+                  </div>
+                </div>
+
+                {/* AI Interpretation */}
+                {activeAiModalItem.ai_interpretation && (
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                      Model Interpretation
+                    </span>
+                    <p className="text-xs text-slate-700 leading-relaxed neu-inset-sm rounded-2xl p-4">
+                      {activeAiModalItem.ai_interpretation}
+                    </p>
+                  </div>
+                )}
+
+                {/* Targeted Program Recommendations */}
+                {activeAiModalItem.ai_recommendations && activeAiModalItem.ai_recommendations.length > 0 && (
+                  <div className="space-y-2.5">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                      Targeted Government Programs
+                    </span>
+                    <div className="space-y-2">
+                      {activeAiModalItem.ai_recommendations.map((rec, i) => {
+                        const style = SECTOR_STYStyles[rec.sector] || "bg-slate-50 text-slate-700 border-slate-200";
+                        return (
+                          <div
+                            key={i}
+                            className="neu-surface-sm p-3.5 rounded-2xl space-y-1.5 border border-white/80"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <h4 className="text-xs font-bold text-slate-800 leading-tight">
+                                {rec.name}
+                              </h4>
+                              {rec.sector && (
+                                <span
+                                  className={`text-[9px] font-mono font-semibold px-2 py-0.5 rounded-full border uppercase tracking-wider flex-shrink-0 ${style}`}
+                                >
+                                  {rec.sector}
+                                </span>
+                              )}
+                            </div>
+                            {rec.agency && (
+                              <p className="text-[10.5px] font-mono font-semibold text-indigo-600">
+                                {rec.agency}
+                              </p>
+                            )}
+                            {rec.rationale && (
+                              <p className="text-[11px] text-slate-600 leading-relaxed font-normal">
+                                {rec.rationale}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="px-6 py-3.5 border-t border-slate-200/80 bg-[#EEF2F6]/80 backdrop-blur-md flex items-center justify-between">
+                <span className="text-[11px] font-mono text-slate-400">
+                  Logged: {formatTimestamp(activeAiModalItem.timestamp)}
+                </span>
+                <button
+                  onClick={() => setActiveAiModalItem(null)}
+                  className="px-5 py-2 neu-btn text-slate-800 text-xs font-semibold rounded-xl cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Comparison Modal */}
       {showCompareModal && compareItems.length === 2 && (
