@@ -194,6 +194,8 @@ export default function BarangayClassifier() {
           predicted_class: data.predicted_class,
           confidence: data.confidence ? Math.round(data.confidence * 100) : null,
           top_feature: topDriver,
+          ai_interpretation: data.interpretation || null,
+          ai_recommendations: data.recommendations || [],
           inputs: {
             "Avg Monthly Income": `PHP ${Number(form.avgMonthlyIncomePhp).toLocaleString()}`,
             "Employed Heads": `${form.pctEmployedHead}%`,

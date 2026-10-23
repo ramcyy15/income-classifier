@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   History,
   Trash2,
@@ -7,6 +7,9 @@ import {
   ArrowRight,
   ArrowUpDown,
   Building2,
+  Sparkles,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import {
   getClassificationHistory,
@@ -54,6 +57,7 @@ export default function HistoryView({ onNavigateToClassifier }) {
   const [history, setHistory] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
   const [showCompareModal, setShowCompareModal] = useState(false);
+  const [expandedAiId, setExpandedAiId] = useState(null);
 
   const loadData = () => {
     // Filter specifically for barangay records
@@ -304,6 +308,20 @@ export default function HistoryView({ onNavigateToClassifier }) {
                     {/* Target Barangay */}
                     <div className="col-span-4 font-semibold text-slate-900 truncate flex items-center gap-2">
                       <span className="truncate">{item.target}</span>
+                      {item.ai_interpretation && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedAiId(expandedAiId === item.id ? null : item.id);
+                          }}
+                          className="flex-shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-600 hover:bg-indigo-100 transition-colors cursor-pointer"
+                          title="View KalingaBot AI suggestions"
+                        >
+                          <Sparkles className="w-2.5 h-2.5" />
+                          <span className="text-[9px] font-bold uppercase tracking-wide">AI</span>
+                          {expandedAiId === item.id ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
+                        </button>
+                      )}
                     </div>
 
                     {/* Tier Indicator */}
@@ -327,6 +345,40 @@ export default function HistoryView({ onNavigateToClassifier }) {
                       {item.top_feature ? item.top_feature.split(" ")[0] : "—"}
                     </div>
                   </div>
+
+                  {/* AI Expand Panel */}
+                  <AnimatePresence>
+                    {expandedAiId === item.id && item.ai_interpretation && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+                        className="overflow-hidden"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="mt-3 mx-1 p-3.5 rounded-2xl bg-indigo-50/60 border border-indigo-100 space-y-2">
+                          <div className="flex items-center gap-1.5 text-[10px] font-bold text-indigo-600 uppercase tracking-wider">
+                            <Sparkles className="w-3 h-3" />
+                            KalingaBot AI Insights
+                          </div>
+                          <p className="text-[11px] text-slate-600 leading-relaxed">{item.ai_interpretation}</p>
+                          {item.ai_recommendations?.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 pt-1">
+                              {item.ai_recommendations.map((rec, ri) => (
+                                <span
+                                  key={ri}
+                                  className="text-[10px] px-2 py-0.5 rounded-full bg-white border border-indigo-200 text-indigo-700 font-semibold"
+                                >
+                                  {rec.name || rec}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
                   {/* Mobile Row Card */}
                   <div className="md:hidden flex items-center justify-between gap-3 text-xs">
