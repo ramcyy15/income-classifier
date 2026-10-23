@@ -184,10 +184,8 @@ export default function BarangayClassifier() {
       setResult(data);
 
       try {
-        const topDriver =
-          data.top_features && data.top_features.length > 0
-            ? data.top_features[0].feature
-            : null;
+        const drivers = data.feature_impacts || data.top_features || [];
+        const topDriver = drivers.length > 0 ? drivers[0].feature : null;
         saveClassificationRecord({
           type: "barangay",
           target: form.barangay,
