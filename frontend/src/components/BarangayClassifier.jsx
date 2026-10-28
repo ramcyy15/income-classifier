@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sliders, RotateCcw, AlertCircle, Eye, EyeOff, Info,
@@ -353,43 +353,49 @@ export default function BarangayClassifier() {
               </select>
             </div>
 
-            {/* ── CLUSTER 1: ECONOMIC INDICATORS ── */}
-            <div className="space-y-2.5 mb-4">
-              <div className="border-l-2 border-indigo-500 pl-2.5">
-                <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-slate-400 block font-semibold">
-                  ECONOMIC INDICATORS
-                </span>
+            {/* ── STEP 1: ECONOMIC INDICATORS ── */}
+            <div className="p-4 rounded-2xl neu-inset-sm space-y-3 mb-4 bg-white/40 border border-white/60">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center">
+                    1
+                  </span>
+                  <span className="text-xs font-bold text-slate-800 tracking-tight">
+                    Economic Foundation
+                  </span>
+                </div>
+                <span className="text-[10px] font-medium text-slate-400">FIES & Employment</span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 items-end">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
                 {/* Hero Field: Avg Monthly Income */}
                 <div
-                  className="md:col-span-2 relative"
+                  className="relative sm:col-span-2"
                   onMouseEnter={() => setHoveredField("avgMonthlyIncomePhp")}
                   onMouseLeave={() => setHoveredField(null)}
                 >
-                  <label className="block text-[11px] font-medium text-slate-600 mb-1 flex items-center justify-between">
-                    <span>Avg. Monthly Income</span>
-                    <span className="text-[9.5px] font-mono text-indigo-600 font-semibold">PRIMARY DRIVER</span>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                    <span>Average Monthly Income (PHP)</span>
+                    <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-bold">
+                      HIGHEST MODEL WEIGHT
+                    </span>
                   </label>
-                  <div className="relative flex items-center rounded-xl neu-inset border-l-4 border-l-indigo-600 overflow-hidden">
-                    <span className="pl-3.5 text-indigo-600 font-bold text-sm">₱</span>
+                  <div className="relative flex items-center rounded-xl neu-inset border-l-4 border-l-indigo-600 bg-white">
+                    <span className="pl-3.5 text-indigo-600 font-bold text-sm select-none">₱</span>
                     <input
                       type="number"
                       min={2000}
                       max={100000}
                       step={500}
-                      placeholder="25,000"
+                      placeholder="e.g. 25,000"
                       value={form.avgMonthlyIncomePhp}
                       onChange={(e) => handleChange("avgMonthlyIncomePhp", e.target.value)}
                       className="w-full px-2.5 py-2.5 text-sm font-semibold font-mono tabular-nums text-slate-900 bg-transparent focus:outline-none placeholder:text-slate-400"
                     />
                   </div>
-                  {hoveredField === "avgMonthlyIncomePhp" && (
-                    <div className="absolute left-0 -top-8 z-30 bg-slate-900 text-white text-[10px] px-2.5 py-1.5 rounded-lg shadow-xl pointer-events-none">
-                      Average monthly household income benchmarked against PSA FIES.
-                    </div>
-                  )}
+                  <span className="text-[9.5px] text-slate-400 mt-1 block">
+                    Benchmark: District V baseline is ~₱25,500/month.
+                  </span>
                 </div>
 
                 {/* Employed Household Heads */}
@@ -398,7 +404,7 @@ export default function BarangayClassifier() {
                   onMouseEnter={() => setHoveredField("pctEmployedHead")}
                   onMouseLeave={() => setHoveredField(null)}
                 >
-                  <label className="block text-[11px] font-medium text-slate-600 mb-1 truncate">
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                     Employed Heads (%)
                   </label>
                   <input
@@ -409,62 +415,53 @@ export default function BarangayClassifier() {
                     placeholder="e.g. 60.0"
                     value={form.pctEmployedHead}
                     onChange={(e) => handleChange("pctEmployedHead", e.target.value)}
-                    className="w-full px-3 py-2 text-xs font-mono tabular-nums font-medium text-slate-800 neu-input rounded-xl placeholder:text-slate-400"
+                    className="w-full px-3 py-2 text-xs font-mono tabular-nums font-semibold text-slate-800 neu-input rounded-xl placeholder:text-slate-400 bg-white"
                   />
-                  {hoveredField === "pctEmployedHead" && (
-                    <div className="absolute right-0 -top-8 z-30 bg-slate-900 text-white text-[10px] px-2.5 py-1.5 rounded-lg shadow-xl pointer-events-none">
-                      Share of household heads gainfully employed.
-                    </div>
-                  )}
+                  <span className="text-[9.5px] text-slate-400 mt-1 block">Gainful employment rate</span>
                 </div>
-              </div>
 
-              {/* Informal Settlers */}
-              <div
-                className="relative"
-                onMouseEnter={() => setHoveredField("pctInformalSettlers")}
-                onMouseLeave={() => setHoveredField(null)}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-[11px] font-medium text-slate-600 truncate">
-                    Informal Settlers Rate (%)
+                {/* Informal Settlers */}
+                <div
+                  className="relative"
+                  onMouseEnter={() => setHoveredField("pctInformalSettlers")}
+                  onMouseLeave={() => setHoveredField(null)}
+                >
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                    Informal Settlers (%)
                   </label>
-                  <span className="text-[9px] text-slate-400 font-normal">Tenure insecurity</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.1}
+                    placeholder="e.g. 28.5"
+                    value={form.pctInformalSettlers}
+                    onChange={(e) => handleChange("pctInformalSettlers", e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-mono tabular-nums font-semibold text-slate-800 neu-input rounded-xl placeholder:text-slate-400 bg-white"
+                  />
+                  <span className="text-[9.5px] text-slate-400 mt-1 block">Tenure insecurity share</span>
                 </div>
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={0.1}
-                  placeholder="e.g. 28.5"
-                  value={form.pctInformalSettlers}
-                  onChange={(e) => handleChange("pctInformalSettlers", e.target.value)}
-                  className="w-full px-3 py-2 text-xs font-mono tabular-nums font-medium text-slate-800 neu-input rounded-xl placeholder:text-slate-400"
-                />
-                {hoveredField === "pctInformalSettlers" && (
-                  <div className="absolute left-0 -top-8 z-30 bg-slate-900 text-white text-[10px] px-2.5 py-1.5 rounded-lg shadow-xl pointer-events-none">
-                    Households in informal or insecure tenure (PSA CPH Housing).
-                  </div>
-                )}
               </div>
             </div>
 
-            {/* ── CLUSTER 2: LIVING CONDITIONS (4-col compact grid) ── */}
-            <div className="space-y-2.5 mb-4">
-              <div className="border-l-2 border-slate-300 pl-2.5">
-                <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-slate-400 block font-semibold">
-                  LIVING CONDITIONS & UTILITIES (0-100%)
-                </span>
+            {/* ── STEP 2: LIVING CONDITIONS & BASIC UTILITIES ── */}
+            <div className="p-4 rounded-2xl neu-inset-sm space-y-3 mb-4 bg-white/40 border border-white/60">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-slate-700 text-white text-[10px] font-bold flex items-center justify-center">
+                    2
+                  </span>
+                  <span className="text-xs font-bold text-slate-800 tracking-tight">
+                    Housing & Infrastructure
+                  </span>
+                </div>
+                <span className="text-[10px] font-medium text-slate-400">0% – 100% scale</span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 {/* Electricity */}
-                <div
-                  className="relative"
-                  onMouseEnter={() => setHoveredField("pctWithAccessToElectricity")}
-                  onMouseLeave={() => setHoveredField(null)}
-                >
-                  <label className="block text-[10px] font-medium text-slate-600 truncate mb-1">
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-semibold text-slate-600 truncate">
                     Electricity (%)
                   </label>
                   <input
@@ -475,22 +472,14 @@ export default function BarangayClassifier() {
                     placeholder="78.0"
                     value={form.pctWithAccessToElectricity}
                     onChange={(e) => handleChange("pctWithAccessToElectricity", e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-mono tabular-nums font-medium text-slate-800 neu-input rounded-lg"
+                    className="w-full px-2.5 py-1.5 text-xs font-mono tabular-nums font-semibold text-slate-800 neu-input rounded-xl bg-white"
                   />
-                  {hoveredField === "pctWithAccessToElectricity" && (
-                    <div className="absolute left-0 -top-8 z-30 bg-slate-900 text-white text-[10px] px-2 py-1 rounded-md shadow-xl whitespace-nowrap pointer-events-none">
-                      Grid electricity access
-                    </div>
-                  )}
+                  <span className="text-[9px] text-slate-400 block truncate">Grid connection</span>
                 </div>
 
                 {/* Safe Water */}
-                <div
-                  className="relative"
-                  onMouseEnter={() => setHoveredField("pctWithSafeWaterAccess")}
-                  onMouseLeave={() => setHoveredField(null)}
-                >
-                  <label className="block text-[10px] font-medium text-slate-600 truncate mb-1">
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-semibold text-slate-600 truncate">
                     Safe Water (%)
                   </label>
                   <input
@@ -501,23 +490,15 @@ export default function BarangayClassifier() {
                     placeholder="70.0"
                     value={form.pctWithSafeWaterAccess}
                     onChange={(e) => handleChange("pctWithSafeWaterAccess", e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-mono tabular-nums font-medium text-slate-800 neu-input rounded-lg"
+                    className="w-full px-2.5 py-1.5 text-xs font-mono tabular-nums font-semibold text-slate-800 neu-input rounded-xl bg-white"
                   />
-                  {hoveredField === "pctWithSafeWaterAccess" && (
-                    <div className="absolute left-0 -top-8 z-30 bg-slate-900 text-white text-[10px] px-2 py-1 rounded-md shadow-xl whitespace-nowrap pointer-events-none">
-                      Potable drinking water
-                    </div>
-                  )}
+                  <span className="text-[9px] text-slate-400 block truncate">Potable access</span>
                 </div>
 
                 {/* Sanitary Toilet */}
-                <div
-                  className="relative"
-                  onMouseEnter={() => setHoveredField("pctWithSanitaryToilet")}
-                  onMouseLeave={() => setHoveredField(null)}
-                >
-                  <label className="block text-[10px] font-medium text-slate-600 truncate mb-1">
-                    Sanitary Toilet (%)
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-semibold text-slate-600 truncate">
+                    Toilet (%)
                   </label>
                   <input
                     type="number"
@@ -527,22 +508,14 @@ export default function BarangayClassifier() {
                     placeholder="68.0"
                     value={form.pctWithSanitaryToilet}
                     onChange={(e) => handleChange("pctWithSanitaryToilet", e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-mono tabular-nums font-medium text-slate-800 neu-input rounded-lg"
+                    className="w-full px-2.5 py-1.5 text-xs font-mono tabular-nums font-semibold text-slate-800 neu-input rounded-xl bg-white"
                   />
-                  {hoveredField === "pctWithSanitaryToilet" && (
-                    <div className="absolute left-0 -top-8 z-30 bg-slate-900 text-white text-[10px] px-2 py-1 rounded-md shadow-xl whitespace-nowrap pointer-events-none">
-                      Water-sealed toilet facility
-                    </div>
-                  )}
+                  <span className="text-[9px] text-slate-400 block truncate">Sanitary facility</span>
                 </div>
 
                 {/* Permanent Housing */}
-                <div
-                  className="relative"
-                  onMouseEnter={() => setHoveredField("pctPermanentHouseMaterial")}
-                  onMouseLeave={() => setHoveredField(null)}
-                >
-                  <label className="block text-[10px] font-medium text-slate-600 truncate mb-1">
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-semibold text-slate-600 truncate">
                     Perm. House (%)
                   </label>
                   <input
@@ -553,33 +526,31 @@ export default function BarangayClassifier() {
                     placeholder="55.0"
                     value={form.pctPermanentHouseMaterial}
                     onChange={(e) => handleChange("pctPermanentHouseMaterial", e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-mono tabular-nums font-medium text-slate-800 neu-input rounded-lg"
+                    className="w-full px-2.5 py-1.5 text-xs font-mono tabular-nums font-semibold text-slate-800 neu-input rounded-xl bg-white"
                   />
-                  {hoveredField === "pctPermanentHouseMaterial" && (
-                    <div className="absolute right-0 -top-8 z-30 bg-slate-900 text-white text-[10px] px-2 py-1 rounded-md shadow-xl whitespace-nowrap pointer-events-none">
-                      Sturdy roof & concrete walls
-                    </div>
-                  )}
+                  <span className="text-[9px] text-slate-400 block truncate">Concrete / sturdy</span>
                 </div>
               </div>
             </div>
 
-            {/* ── CLUSTER 3: HUMAN CAPITAL ── */}
-            <div className="space-y-2.5">
-              <div className="border-l-2 border-slate-300 pl-2.5">
-                <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-slate-400 block font-semibold">
-                  HUMAN CAPITAL & DEMOGRAPHICS
-                </span>
+            {/* ── STEP 3: HUMAN CAPITAL & DEMOGRAPHICS ── */}
+            <div className="p-4 rounded-2xl neu-inset-sm space-y-3 bg-white/40 border border-white/60">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-slate-700 text-white text-[10px] font-bold flex items-center justify-center">
+                    3
+                  </span>
+                  <span className="text-xs font-bold text-slate-800 tracking-tight">
+                    Education & Demographics
+                  </span>
+                </div>
+                <span className="text-[10px] font-medium text-slate-400">PSA Human Capital</span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 items-end">
                 {/* School Enrollment */}
-                <div
-                  className="relative"
-                  onMouseEnter={() => setHoveredField("netEnrollmentRate")}
-                  onMouseLeave={() => setHoveredField(null)}
-                >
-                  <label className="block text-[11px] font-medium text-slate-600 mb-1 truncate">
+                <div className="space-y-1">
+                  <label className="block text-[11px] font-semibold text-slate-700 truncate">
                     School Enrollment (%)
                   </label>
                   <input
@@ -590,23 +561,15 @@ export default function BarangayClassifier() {
                     placeholder="81.0"
                     value={form.netEnrollmentRate}
                     onChange={(e) => handleChange("netEnrollmentRate", e.target.value)}
-                    className="w-full px-3 py-2 text-xs font-mono tabular-nums font-medium text-slate-800 neu-input rounded-xl"
+                    className="w-full px-3 py-2 text-xs font-mono tabular-nums font-semibold text-slate-800 neu-input rounded-xl bg-white"
                   />
-                  {hoveredField === "netEnrollmentRate" && (
-                    <div className="absolute left-0 -top-8 z-30 bg-slate-900 text-white text-[10px] px-2.5 py-1.5 rounded-lg shadow-xl pointer-events-none">
-                      Net enrollment of children aged 6 to 17.
-                    </div>
-                  )}
+                  <span className="text-[9.5px] text-slate-400 block truncate">Ages 6–17 enrolled</span>
                 </div>
 
                 {/* Completed High School */}
-                <div
-                  className="relative"
-                  onMouseEnter={() => setHoveredField("pctCompletedSecondaryEducation")}
-                  onMouseLeave={() => setHoveredField(null)}
-                >
-                  <label className="block text-[11px] font-medium text-slate-600 mb-1 truncate">
-                    Completed High School (%)
+                <div className="space-y-1">
+                  <label className="block text-[11px] font-semibold text-slate-700 truncate">
+                    High School (%)
                   </label>
                   <input
                     type="number"
@@ -616,43 +579,28 @@ export default function BarangayClassifier() {
                     placeholder="54.0"
                     value={form.pctCompletedSecondaryEducation}
                     onChange={(e) => handleChange("pctCompletedSecondaryEducation", e.target.value)}
-                    className="w-full px-3 py-2 text-xs font-mono tabular-nums font-medium text-slate-800 neu-input rounded-xl"
+                    className="w-full px-3 py-2 text-xs font-mono tabular-nums font-semibold text-slate-800 neu-input rounded-xl bg-white"
                   />
-                  {hoveredField === "pctCompletedSecondaryEducation" && (
-                    <div className="absolute right-0 -top-8 z-30 bg-slate-900 text-white text-[10px] px-2.5 py-1.5 rounded-lg shadow-xl pointer-events-none">
-                      Share of heads completing secondary education.
-                    </div>
-                  )}
+                  <span className="text-[9.5px] text-slate-400 block truncate">Secondary completion</span>
                 </div>
-              </div>
 
-              {/* Family Size - full width */}
-              <div
-                className="relative"
-                onMouseEnter={() => setHoveredField("avgFamilySize")}
-                onMouseLeave={() => setHoveredField(null)}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-[11px] font-medium text-slate-600 truncate">
-                    Average Family Size (Household Members)
+                {/* Family Size */}
+                <div className="space-y-1">
+                  <label className="block text-[11px] font-semibold text-slate-700 truncate">
+                    Avg Family Size
                   </label>
-                  <span className="text-[9px] text-slate-400 font-normal">Subsistence divisor</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={12}
+                    step={0.1}
+                    placeholder="5.1"
+                    value={form.avgFamilySize}
+                    onChange={(e) => handleChange("avgFamilySize", e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-mono tabular-nums font-semibold text-slate-800 neu-input rounded-xl bg-white"
+                  />
+                  <span className="text-[9.5px] text-slate-400 block truncate">Members per home</span>
                 </div>
-                <input
-                  type="number"
-                  min={1}
-                  max={12}
-                  step={0.1}
-                  placeholder="e.g. 5.1"
-                  value={form.avgFamilySize}
-                  onChange={(e) => handleChange("avgFamilySize", e.target.value)}
-                  className="w-full px-3.5 py-2 text-xs font-mono tabular-nums font-medium text-slate-800 neu-input rounded-xl"
-                />
-                {hoveredField === "avgFamilySize" && (
-                  <div className="absolute left-0 -top-8 z-30 bg-slate-900 text-white text-[10px] px-2.5 py-1.5 rounded-lg shadow-xl pointer-events-none">
-                    Average household size dividing income and subsistence resources.
-                  </div>
-                )}
               </div>
             </div>
           </div>
