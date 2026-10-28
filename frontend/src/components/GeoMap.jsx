@@ -148,11 +148,8 @@ export default function GeoMap({ barangay, tier }) {
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-xs font-bold text-slate-900 tracking-tight">
-                Barangay Hall Location Pin
+                Barangay Hall Location
               </h3>
-              <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-semibold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200/70">
-                Official QC Hall
-              </span>
             </div>
             <p className="text-[10.5px] text-slate-500 font-medium mt-0.5">
               {hallInfo
@@ -162,17 +159,8 @@ export default function GeoMap({ barangay, tier }) {
           </div>
         </div>
 
-        {/* Right Controls: Layer Switcher & Tier Badge */}
+        {/* Right Controls: Tier Badge */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setMapLayer(mapLayer === "osm" ? "carto" : "osm")}
-            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-xl neu-btn text-[10px] font-semibold text-slate-600 hover:text-slate-900 cursor-pointer"
-            title="Toggle Clean / Detailed Map Tiles"
-          >
-            <Layers className="w-3 h-3 text-indigo-600" />
-            <span>{mapLayer === "osm" ? "Clean Style" : "Street Style"}</span>
-          </button>
-
           {coords && (
             <span
               className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${tierMeta.badge}`}

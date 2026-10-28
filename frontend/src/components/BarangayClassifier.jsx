@@ -116,9 +116,28 @@ const itemVariants = {
   },
 };
 
+const SESSION_FORM_KEY = "qc5_barangay_form_draft";
+const SESSION_RESULT_KEY = "qc5_barangay_prediction_result";
+
 export default function BarangayClassifier() {
-  const [form, setForm] = useState(DEFAULT_FORM);
-  const [result, setResult] = useState(null);
+  const [form, setForm] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem(SESSION_FORM_KEY);
+      return saved ? JSON.parse(saved) : DEFAULT_FORM;
+    } catch {
+      return DEFAULT_FORM;
+    }
+  });
+
+  const [result, setResult] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem(SESSION_RESULT_KEY);
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [hoveredField, setHoveredField] = useState(null);
@@ -127,6 +146,28 @@ export default function BarangayClassifier() {
   const [requestSeconds, setRequestSeconds] = useState(0);
 
   const { status: serverStatus, secondsElapsed: serverSeconds } = useServerHealth();
+
+  // Keep form synced to sessionStorage
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(SESSION_FORM_KEY, JSON.stringify(form));
+    } catch (e) {
+      console.warn("Failed to persist form draft", e);
+    }
+  }, [form]);
+
+  // Keep result synced to sessionStorage
+  useEffect(() => {
+    try {
+      if (result) {
+        sessionStorage.setItem(SESSION_RESULT_KEY, JSON.stringify(result));
+      } else {
+        sessionStorage.removeItem(SESSION_RESULT_KEY);
+      }
+    } catch (e) {
+      console.warn("Failed to persist prediction result", e);
+    }
+  }, [result]);
 
   const handleChange = (id, val) => {
     setForm((f) => ({ ...f, [id]: val }));
@@ -223,6 +264,12 @@ export default function BarangayClassifier() {
     setResult(null);
     setError(null);
     setPreset("");
+    try {
+      sessionStorage.removeItem(SESSION_FORM_KEY);
+      sessionStorage.removeItem(SESSION_RESULT_KEY);
+    } catch (e) {
+      console.warn("Failed to clear sessionStorage drafts", e);
+    }
   };
 
   return (
