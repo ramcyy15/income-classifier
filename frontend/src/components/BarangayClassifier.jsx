@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sliders, RotateCcw, AlertCircle, Eye, EyeOff, Info,
-  DollarSign, Users, Home, Sparkles, TrendingUp, CheckCircle2, GraduationCap, Baby
+  DollarSign, Users, Home, Sparkles, TrendingUp, CheckCircle2, GraduationCap, Baby, HelpCircle
 } from "lucide-react";
 import kalingaLogo from "../assets/KalingaBot AI.png";
 import GeoMap from "./GeoMap";
@@ -119,6 +119,33 @@ const itemVariants = {
 const SESSION_FORM_KEY = "qc5_barangay_form_draft";
 const SESSION_RESULT_KEY = "qc5_barangay_prediction_result";
 
+// Field Validator
+export const validateField = (id, val) => {
+  if (val === "" || val === null || val === undefined) return null;
+  const num = Number(val);
+  if (isNaN(num)) return "Must be a valid number";
+
+  if (id === "avgMonthlyIncomePhp") {
+    if (num <= 0) return "Income must be positive (> ₱0)";
+    if (num < 500) return "Minimum operational income is ₱500";
+    if (num > 1000000) return "Value exceeds realistic limit (₱1,000,000)";
+    return null;
+  }
+
+  if (id === "avgFamilySize") {
+    if (num <= 0) return "Family size must be positive (> 0)";
+    if (num < 1) return "Must be at least 1 member";
+    if (num > 25) return "Realistic limit is 25 members";
+    return null;
+  }
+
+  // Percentage fields (0 to 100)
+  if (num < 0) return "Percentage cannot be negative (min 0%)";
+  if (num > 100) return "Percentage cannot exceed 100% (max 100%)";
+
+  return null;
+};
+
 export default function BarangayClassifier() {
   const [form, setForm] = useState(() => {
     try {
@@ -192,9 +219,21 @@ export default function BarangayClassifier() {
     }
   };
 
-  const isFormValid = REQUIRED_KEYS.every(
+  // Real-time Field Errors calculation
+  const fieldErrors = useMemo(() => {
+    const errs = {};
+    for (const key of REQUIRED_KEYS) {
+      const msg = validateField(key, form[key]);
+      if (msg) errs[key] = msg;
+    }
+    return errs;
+  }, [form]);
+
+  const hasValidationErrors = Object.keys(fieldErrors).length > 0;
+  const isFormFilled = REQUIRED_KEYS.every(
     (k) => form[k] !== "" && !isNaN(Number(form[k]))
   );
+  const isFormValid = isFormFilled && !hasValidationErrors;
 
   const handleSubmit = async () => {
     if (!isFormValid) return;
@@ -225,17 +264,25 @@ export default function BarangayClassifier() {
       setResult(data);
 
       try {
-        const drivers = data.feature_impacts || data.top_features || [];
+        const drivers = data.feature_impacts || [];
         const topDriver = drivers.length > 0 ? drivers[0].feature : null;
         saveClassificationRecord({
           type: "barangay",
           target: form.barangay,
+          barangay: form.barangay,
           predicted_class: data.predicted_class,
+          tier_label: data.tier_label,
+          tier_meaning: data.tier_meaning,
           confidence: data.confidence ? Math.round(data.confidence * 100) : null,
+          probabilities: data.probabilities,
           top_feature: topDriver,
+          feature_impacts: drivers,
           ai_interpretation: data.interpretation || null,
           ai_recommendations: data.recommendations || [],
-          inputs: {
+          ai_provider: data.ai_provider,
+          is_fallback: data.is_fallback,
+          ai_note: data.ai_note,
+          inputs: data.inputs || {
             "Avg Monthly Income": `PHP ${Number(form.avgMonthlyIncomePhp).toLocaleString()}`,
             "Employed Heads": `${form.pctEmployedHead}%`,
             "Informal Settlers": `${form.pctInformalSettlers}%`,
@@ -247,6 +294,19 @@ export default function BarangayClassifier() {
             "Secondary Educated": `${form.pctCompletedSecondaryEducation}%`,
             "Avg Family Size": form.avgFamilySize,
           },
+          raw_inputs: data.raw_inputs || {
+            barangay: form.barangay,
+            avg_monthly_income_php: Number(form.avgMonthlyIncomePhp),
+            pct_employed_head: Number(form.pctEmployedHead),
+            pct_informal_settlers: Number(form.pctInformalSettlers),
+            pct_with_access_to_electricity: Number(form.pctWithAccessToElectricity),
+            pct_with_safe_water_access: Number(form.pctWithSafeWaterAccess),
+            pct_with_sanitary_toilet: Number(form.pctWithSanitaryToilet),
+            pct_permanent_house_material: Number(form.pctPermanentHouseMaterial),
+            net_enrollment_rate: Number(form.netEnrollmentRate),
+            pct_completed_secondary_education: Number(form.pctCompletedSecondaryEducation),
+            avg_family_size: Number(form.avgFamilySize),
+          }
         });
       } catch (err) {
         console.warn("Failed to record history:", err);
@@ -276,7 +336,7 @@ export default function BarangayClassifier() {
     <div className="space-y-5">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
         {/* LEFT PANEL: Multi-Density Form */}
-        <div className="neu-surface rounded-3xl p-6 space-y-4 flex flex-col justify-between">
+        <div className="neu-surface rounded-3xl p-6 space-y-4 flex flex-col justify-between shadow-sm">
           <div>
             {/* Header / Subtitle & Test Controls */}
             <div className="flex items-center justify-between mb-3">
@@ -367,7 +427,7 @@ export default function BarangayClassifier() {
                 <span className="text-[10px] font-medium text-slate-400">FIES & Employment</span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
                 {/* Hero Field: Avg Monthly Income */}
                 <div
                   className="relative sm:col-span-2"
@@ -380,12 +440,17 @@ export default function BarangayClassifier() {
                       HIGHEST MODEL WEIGHT
                     </span>
                   </label>
-                  <div className="relative flex items-center rounded-xl neu-inset border-l-4 border-l-indigo-600 bg-white">
+                  <div
+                    className={`relative flex items-center rounded-xl neu-inset border-l-4 ${
+                      fieldErrors.avgMonthlyIncomePhp
+                        ? "border-l-rose-500 border-rose-300 bg-rose-50/20"
+                        : "border-l-indigo-600 bg-white"
+                    }`}
+                  >
                     <span className="pl-3.5 text-indigo-600 font-bold text-sm select-none">₱</span>
                     <input
                       type="number"
-                      min={2000}
-                      max={100000}
+                      min={1000}
                       step={500}
                       placeholder="e.g. 25,000"
                       value={form.avgMonthlyIncomePhp}
@@ -393,9 +458,16 @@ export default function BarangayClassifier() {
                       className="w-full px-2.5 py-2.5 text-sm font-semibold font-mono tabular-nums text-slate-900 bg-transparent focus:outline-none placeholder:text-slate-400"
                     />
                   </div>
-                  <span className="text-[9.5px] text-slate-400 mt-1 block">
-                    Benchmark: District V baseline is ~₱25,500/month.
-                  </span>
+                  {fieldErrors.avgMonthlyIncomePhp ? (
+                    <span className="text-[10px] text-rose-600 font-medium flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                      {fieldErrors.avgMonthlyIncomePhp}
+                    </span>
+                  ) : (
+                    <span className="text-[9.5px] text-slate-400 mt-1 block">
+                      Benchmark: District V baseline is ~₱25,500/month.
+                    </span>
+                  )}
                 </div>
 
                 {/* Employed Household Heads */}
@@ -415,9 +487,18 @@ export default function BarangayClassifier() {
                     placeholder="e.g. 60.0"
                     value={form.pctEmployedHead}
                     onChange={(e) => handleChange("pctEmployedHead", e.target.value)}
-                    className="w-full px-3 py-2 text-xs font-mono tabular-nums font-semibold text-slate-800 neu-input rounded-xl placeholder:text-slate-400 bg-white"
+                    className={`w-full px-3 py-2 text-xs font-mono tabular-nums font-semibold text-slate-800 neu-input rounded-xl placeholder:text-slate-400 bg-white ${
+                      fieldErrors.pctEmployedHead ? "border-rose-400 bg-rose-50/30 text-rose-900" : ""
+                    }`}
                   />
-                  <span className="text-[9.5px] text-slate-400 mt-1 block">Gainful employment rate</span>
+                  {fieldErrors.pctEmployedHead ? (
+                    <span className="text-[10px] text-rose-600 font-medium flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                      {fieldErrors.pctEmployedHead}
+                    </span>
+                  ) : (
+                    <span className="text-[9.5px] text-slate-400 mt-1 block">Gainful employment rate (0–100%)</span>
+                  )}
                 </div>
 
                 {/* Informal Settlers */}
@@ -437,9 +518,18 @@ export default function BarangayClassifier() {
                     placeholder="e.g. 28.5"
                     value={form.pctInformalSettlers}
                     onChange={(e) => handleChange("pctInformalSettlers", e.target.value)}
-                    className="w-full px-3 py-2 text-xs font-mono tabular-nums font-semibold text-slate-800 neu-input rounded-xl placeholder:text-slate-400 bg-white"
+                    className={`w-full px-3 py-2 text-xs font-mono tabular-nums font-semibold text-slate-800 neu-input rounded-xl placeholder:text-slate-400 bg-white ${
+                      fieldErrors.pctInformalSettlers ? "border-rose-400 bg-rose-50/30 text-rose-900" : ""
+                    }`}
                   />
-                  <span className="text-[9.5px] text-slate-400 mt-1 block">Tenure insecurity share</span>
+                  {fieldErrors.pctInformalSettlers ? (
+                    <span className="text-[10px] text-rose-600 font-medium flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                      {fieldErrors.pctInformalSettlers}
+                    </span>
+                  ) : (
+                    <span className="text-[9.5px] text-slate-400 mt-1 block">Tenure insecurity share (0–100%)</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -458,7 +548,7 @@ export default function BarangayClassifier() {
                 <span className="text-[10px] font-medium text-slate-400">0% – 100% scale</span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 items-start">
                 {/* Electricity */}
                 <div className="space-y-1">
                   <label className="block text-[10px] font-semibold text-slate-600 truncate">
@@ -472,9 +562,17 @@ export default function BarangayClassifier() {
                     placeholder="78.0"
                     value={form.pctWithAccessToElectricity}
                     onChange={(e) => handleChange("pctWithAccessToElectricity", e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-mono tabular-nums font-semibold text-slate-800 neu-input rounded-xl bg-white"
+                    className={`w-full px-2.5 py-1.5 text-xs font-mono tabular-nums font-semibold text-slate-800 neu-input rounded-xl bg-white ${
+                      fieldErrors.pctWithAccessToElectricity ? "border-rose-400 bg-rose-50/30 text-rose-900" : ""
+                    }`}
                   />
-                  <span className="text-[9px] text-slate-400 block truncate">Grid connection</span>
+                  {fieldErrors.pctWithAccessToElectricity ? (
+                    <span className="text-[9px] text-rose-600 font-medium block leading-tight">
+                      {fieldErrors.pctWithAccessToElectricity}
+                    </span>
+                  ) : (
+                    <span className="text-[9px] text-slate-400 block truncate">Grid connection</span>
+                  )}
                 </div>
 
                 {/* Safe Water */}
@@ -490,9 +588,17 @@ export default function BarangayClassifier() {
                     placeholder="70.0"
                     value={form.pctWithSafeWaterAccess}
                     onChange={(e) => handleChange("pctWithSafeWaterAccess", e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-mono tabular-nums font-semibold text-slate-800 neu-input rounded-xl bg-white"
+                    className={`w-full px-2.5 py-1.5 text-xs font-mono tabular-nums font-semibold text-slate-800 neu-input rounded-xl bg-white ${
+                      fieldErrors.pctWithSafeWaterAccess ? "border-rose-400 bg-rose-50/30 text-rose-900" : ""
+                    }`}
                   />
-                  <span className="text-[9px] text-slate-400 block truncate">Potable access</span>
+                  {fieldErrors.pctWithSafeWaterAccess ? (
+                    <span className="text-[9px] text-rose-600 font-medium block leading-tight">
+                      {fieldErrors.pctWithSafeWaterAccess}
+                    </span>
+                  ) : (
+                    <span className="text-[9px] text-slate-400 block truncate">Potable access</span>
+                  )}
                 </div>
 
                 {/* Sanitary Toilet */}
@@ -508,9 +614,17 @@ export default function BarangayClassifier() {
                     placeholder="68.0"
                     value={form.pctWithSanitaryToilet}
                     onChange={(e) => handleChange("pctWithSanitaryToilet", e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-mono tabular-nums font-semibold text-slate-800 neu-input rounded-xl bg-white"
+                    className={`w-full px-2.5 py-1.5 text-xs font-mono tabular-nums font-semibold text-slate-800 neu-input rounded-xl bg-white ${
+                      fieldErrors.pctWithSanitaryToilet ? "border-rose-400 bg-rose-50/30 text-rose-900" : ""
+                    }`}
                   />
-                  <span className="text-[9px] text-slate-400 block truncate">Sanitary facility</span>
+                  {fieldErrors.pctWithSanitaryToilet ? (
+                    <span className="text-[9px] text-rose-600 font-medium block leading-tight">
+                      {fieldErrors.pctWithSanitaryToilet}
+                    </span>
+                  ) : (
+                    <span className="text-[9px] text-slate-400 block truncate">Sanitary facility</span>
+                  )}
                 </div>
 
                 {/* Permanent Housing */}
@@ -526,9 +640,17 @@ export default function BarangayClassifier() {
                     placeholder="55.0"
                     value={form.pctPermanentHouseMaterial}
                     onChange={(e) => handleChange("pctPermanentHouseMaterial", e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-mono tabular-nums font-semibold text-slate-800 neu-input rounded-xl bg-white"
+                    className={`w-full px-2.5 py-1.5 text-xs font-mono tabular-nums font-semibold text-slate-800 neu-input rounded-xl bg-white ${
+                      fieldErrors.pctPermanentHouseMaterial ? "border-rose-400 bg-rose-50/30 text-rose-900" : ""
+                    }`}
                   />
-                  <span className="text-[9px] text-slate-400 block truncate">Concrete / sturdy</span>
+                  {fieldErrors.pctPermanentHouseMaterial ? (
+                    <span className="text-[9px] text-rose-600 font-medium block leading-tight">
+                      {fieldErrors.pctPermanentHouseMaterial}
+                    </span>
+                  ) : (
+                    <span className="text-[9px] text-slate-400 block truncate">Concrete / sturdy</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -547,7 +669,7 @@ export default function BarangayClassifier() {
                 <span className="text-[10px] font-medium text-slate-400">PSA Human Capital</span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 items-end">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 items-start">
                 {/* School Enrollment */}
                 <div className="space-y-1">
                   <label className="block text-[11px] font-semibold text-slate-700 truncate">
@@ -561,9 +683,18 @@ export default function BarangayClassifier() {
                     placeholder="81.0"
                     value={form.netEnrollmentRate}
                     onChange={(e) => handleChange("netEnrollmentRate", e.target.value)}
-                    className="w-full px-3 py-2 text-xs font-mono tabular-nums font-semibold text-slate-800 neu-input rounded-xl bg-white"
+                    className={`w-full px-3 py-2 text-xs font-mono tabular-nums font-semibold text-slate-800 neu-input rounded-xl bg-white ${
+                      fieldErrors.netEnrollmentRate ? "border-rose-400 bg-rose-50/30 text-rose-900" : ""
+                    }`}
                   />
-                  <span className="text-[9.5px] text-slate-400 block truncate">Ages 6–17 enrolled</span>
+                  {fieldErrors.netEnrollmentRate ? (
+                    <span className="text-[10px] text-rose-600 font-medium flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                      {fieldErrors.netEnrollmentRate}
+                    </span>
+                  ) : (
+                    <span className="text-[9.5px] text-slate-400 block truncate">Ages 6–17 enrolled (0–100%)</span>
+                  )}
                 </div>
 
                 {/* Completed High School */}
@@ -579,9 +710,18 @@ export default function BarangayClassifier() {
                     placeholder="54.0"
                     value={form.pctCompletedSecondaryEducation}
                     onChange={(e) => handleChange("pctCompletedSecondaryEducation", e.target.value)}
-                    className="w-full px-3 py-2 text-xs font-mono tabular-nums font-semibold text-slate-800 neu-input rounded-xl bg-white"
+                    className={`w-full px-3 py-2 text-xs font-mono tabular-nums font-semibold text-slate-800 neu-input rounded-xl bg-white ${
+                      fieldErrors.pctCompletedSecondaryEducation ? "border-rose-400 bg-rose-50/30 text-rose-900" : ""
+                    }`}
                   />
-                  <span className="text-[9.5px] text-slate-400 block truncate">Secondary completion</span>
+                  {fieldErrors.pctCompletedSecondaryEducation ? (
+                    <span className="text-[10px] text-rose-600 font-medium flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                      {fieldErrors.pctCompletedSecondaryEducation}
+                    </span>
+                  ) : (
+                    <span className="text-[9.5px] text-slate-400 block truncate">Secondary completion (0–100%)</span>
+                  )}
                 </div>
 
                 {/* Family Size */}
@@ -592,14 +732,23 @@ export default function BarangayClassifier() {
                   <input
                     type="number"
                     min={1}
-                    max={12}
+                    max={20}
                     step={0.1}
                     placeholder="5.1"
                     value={form.avgFamilySize}
                     onChange={(e) => handleChange("avgFamilySize", e.target.value)}
-                    className="w-full px-3 py-2 text-xs font-mono tabular-nums font-semibold text-slate-800 neu-input rounded-xl bg-white"
+                    className={`w-full px-3 py-2 text-xs font-mono tabular-nums font-semibold text-slate-800 neu-input rounded-xl bg-white ${
+                      fieldErrors.avgFamilySize ? "border-rose-400 bg-rose-50/30 text-rose-900" : ""
+                    }`}
                   />
-                  <span className="text-[9.5px] text-slate-400 block truncate">Members per home</span>
+                  {fieldErrors.avgFamilySize ? (
+                    <span className="text-[10px] text-rose-600 font-medium flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                      {fieldErrors.avgFamilySize}
+                    </span>
+                  ) : (
+                    <span className="text-[9.5px] text-slate-400 block truncate">Positive head count (1–20)</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -610,7 +759,11 @@ export default function BarangayClassifier() {
             <button
               onClick={handleSubmit}
               disabled={!isFormValid || loading}
-              className="w-full py-3.5 rounded-2xl text-white font-semibold text-[13px] flex items-center justify-center gap-2 neu-btn-primary"
+              className={`w-full py-3.5 rounded-2xl text-white font-semibold text-[13px] flex items-center justify-center gap-2 transition-all ${
+                !isFormValid || loading
+                  ? "opacity-60 neu-btn text-slate-400 cursor-not-allowed"
+                  : "neu-btn-primary cursor-pointer active:scale-98 shadow-md"
+              }`}
             >
               {loading ? (
                 <>
@@ -626,15 +779,16 @@ export default function BarangayClassifier() {
               )}
             </button>
 
-            {loading && (serverStatus === "waking" || requestSeconds >= 2) && (
-              <p className="text-center text-[10.5px] text-amber-700 bg-amber-500/10 border border-amber-300/60 rounded-xl py-1.5 px-3 mt-2 font-medium">
-                ⏳ First request wakes the Render cloud container (~30s). Please keep this page open.
+            {hasValidationErrors && (
+              <p className="text-center text-[11px] text-rose-600 bg-rose-500/10 border border-rose-300/60 rounded-xl py-1.5 px-3 mt-2 font-medium flex items-center justify-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>Please correct invalid inputs above: percentage fields must be 0–100, and income & family size must be positive.</span>
               </p>
             )}
 
-            {!isFormValid && !loading && (
+            {!isFormFilled && !hasValidationErrors && !loading && (
               <p className="text-center text-[10px] text-slate-400 flex items-center justify-center gap-1 mt-2 font-mono">
-                <AlertCircle className="w-3 h-3" /> Complete all 10 indicators to run the machine learning classification.
+                <AlertCircle className="w-3 h-3" /> Complete all 10 indicators to run machine learning classification.
               </p>
             )}
 
@@ -666,9 +820,7 @@ export default function BarangayClassifier() {
                 {requestSeconds > 0 ? `${requestSeconds}s elapsed` : "Initializing inference…"}
               </p>
               <p className="text-[11px] text-slate-500 mt-2 max-w-[280px] leading-relaxed">
-                {serverStatus === "waking" || requestSeconds >= 2
-                  ? "Render free-tier instances hibernate after 15 min of inactivity. Loading runtime & 62MB Scikit-Learn stacking model into memory (~30s)."
-                  : "Evaluating 10 community socio-economic indicators across Random Forest and Gradient Boosting base estimators."}
+                Evaluating 10 community socio-economic indicators across Random Forest and Gradient Boosting base estimators.
               </p>
               <div className="w-48 h-1.5 rounded-full neu-inset overflow-hidden mt-4">
                 <div className="h-full bg-gradient-to-r from-indigo-500 to-amber-500 rounded-full animate-pulse w-3/4" />
@@ -677,7 +829,7 @@ export default function BarangayClassifier() {
           )}
 
           {!result && !loading && (
-            <div className="h-full neu-surface rounded-3xl flex flex-col items-center justify-center text-center p-10">
+            <div className="h-full neu-surface rounded-3xl flex flex-col items-center justify-center text-center p-10 shadow-sm">
               <motion.div
                 animate={{ y: [0, -6, 0] }}
                 transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
@@ -733,12 +885,15 @@ export default function BarangayClassifier() {
               )}
 
               {/* AI Policy Suggestions */}
-              {(result.interpretation || result.recommendations?.length > 0) && (
+              {(result.interpretation || result.recommendations?.length > 0 || result.ai_note) && (
                 <motion.div variants={itemVariants}>
                   <AISuggestions
                     interpretation={result.interpretation}
                     recommendations={result.recommendations}
-                    subtitle="Gemini-powered recommendations based on this barangay's PSA indicators"
+                    subtitle="Evidence-based policy advice derived from socio-economic indicators"
+                    isFallback={result.is_fallback}
+                    aiProvider={result.ai_provider}
+                    aiNote={result.ai_note}
                   />
                 </motion.div>
               )}

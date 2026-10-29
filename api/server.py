@@ -1,16 +1,23 @@
+import io
+import csv
 import json
+import logging
 import os
 import time
 import threading
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Dict, Any, List, Optional
+
+logger = logging.getLogger(__name__)
 import joblib
 import numpy as np
 import pandas as pd
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, HTTPException, Query, Request, UploadFile, File
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from fastapi.responses import JSONResponse, Response, PlainTextResponse
+from pydantic import BaseModel, Field
 from google import genai
 from google.genai import types
 
@@ -155,35 +162,6 @@ FEATURE_LABELS = {
     "household_status_Delisted": "Removed from 4Ps",
 }
 
-app = FastAPI(title="District V Income Classifier API", version="2.0.0")
-
-# CORS — allow_credentials + wildcard origin is invalid per spec; use explicit origins.
-# We allow all origins with the wildcard but WITHOUT credentials to keep it simple.
-ALLOW_ORIGINS = [
-    "https://income-classifier.vercel.app",
-    "http://localhost:5173",
-    "http://localhost:3000",
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOW_ORIGINS,
-    allow_origin_regex=r"https://.*\.vercel\.app",  # allow all Vercel preview URLs
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Global exception handler — ensures CORS headers are present even on 500 errors
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    origin = request.headers.get("origin", "")
-    headers = {"Access-Control-Allow-Origin": origin or "*"}
-    if isinstance(exc, HTTPException):
-        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail}, headers=headers)
-    return JSONResponse(status_code=500, content={"detail": str(exc)}, headers=headers)
-
-
 # Global caches
 _CACHE = {}
 
@@ -210,6 +188,88 @@ def get_barangay_model():
         else:
             _CACHE["barangay_model"] = None
     return _CACHE["barangay_model"]
+
+def _start_keep_alive_worker():
+    """Background worker to keep cloud backends (Render, etc.) awake via scheduled ping every 10 mins."""
+    def _worker():
+        interval = int(os.environ.get("KEEP_ALIVE_INTERVAL_SEC", 600))
+        target_url = os.environ.get("KEEP_ALIVE_URL") or os.environ.get("RENDER_EXTERNAL_URL")
+        while True:
+            time.sleep(interval)
+            try:
+                url = f"{target_url.rstrip('/')}/api/health" if target_url else "http://127.0.0.1:8000/api/health"
+                import urllib.request
+                req = urllib.request.Request(url, headers={"User-Agent": "KalingaBot-KeepAlive/1.0"})
+                with urllib.request.urlopen(req, timeout=10):
+                    pass
+            except Exception:
+                pass
+
+    t = threading.Thread(target=_worker, daemon=True, name="keep-alive-worker")
+    t.start()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Eagerly pre-load ML models at server startup to eradicate the 35s cold start delay
+    t0 = time.time()
+    print("[Cold-Start Optimization] Pre-loading ML models into memory at build/startup...")
+    try:
+        get_barangay_model()
+        print(f"[Cold-Start Optimization] Barangay stacking model ready in {time.time() - t0:.2f}s")
+    except Exception as e:
+        print(f"[Cold-Start Optimization] Warning: Failed to pre-load barangay model: {e}")
+    try:
+        get_individual_model()
+        print(f"[Cold-Start Optimization] Individual family model ready in {time.time() - t0:.2f}s")
+    except Exception as e:
+        print(f"[Cold-Start Optimization] Warning: Failed to pre-load individual model: {e}")
+    _start_keep_alive_worker()
+    yield
+
+app = FastAPI(title="District V Income Classifier API", version="2.1.0", lifespan=lifespan)
+
+# CORS — allow_credentials + wildcard origin is invalid per spec; use explicit origins.
+# We allow all origins with the wildcard but WITHOUT credentials to keep it simple.
+ALLOW_ORIGINS = [
+    "https://income-classifier.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:3000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOW_ORIGINS,
+    allow_origin_regex=r"https://.*\.vercel\.app",  # allow all Vercel preview URLs
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Global validation exception handler — produces clear, plain-language error explanations
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    origin = request.headers.get("origin", "")
+    headers = {"Access-Control-Allow-Origin": origin or "*"}
+    error_messages = []
+    for err in exc.errors():
+        field = " -> ".join(str(loc) for loc in err.get("loc", []) if loc != "body")
+        msg = err.get("msg", "Invalid value")
+        error_messages.append(f"{field}: {msg}" if field else msg)
+    detail_str = "; ".join(error_messages)
+    return JSONResponse(
+        status_code=422,
+        content={"detail": detail_str, "errors": exc.errors()},
+        headers=headers,
+    )
+
+# Global exception handler — ensures CORS headers are present even on 500 errors
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    origin = request.headers.get("origin", "")
+    headers = {"Access-Control-Allow-Origin": origin or "*"}
+    if isinstance(exc, HTTPException):
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail}, headers=headers)
+    return JSONResponse(status_code=500, content={"detail": str(exc)}, headers=headers)
 
 def _warmup_models_background():
     try:
@@ -865,11 +925,11 @@ Provide a concise 2-3 sentence implementation roadmap. Explain why this specific
     }
 
 class ClassifyIndividualRequest(BaseModel):
-    monthly_per_capita_income: Optional[float] = None
-    total_monthly_income: Optional[float] = None
-    family_size: float
-    dependents_0_18: float
-    children_in_school: float
+    monthly_per_capita_income: Optional[float] = Field(None, gt=0.0, description="Monthly per-capita income must be positive")
+    total_monthly_income: Optional[float] = Field(None, gt=0.0, description="Total monthly income must be positive")
+    family_size: float = Field(..., gt=0.0, le=30.0, description="Family size must be positive (1–30)")
+    dependents_0_18: float = Field(..., ge=0.0, le=30.0, description="Dependents must be non-negative")
+    children_in_school: float = Field(..., ge=0.0, le=30.0, description="Children in school must be non-negative")
     household_status: Optional[str] = "None"
     barangay: Optional[str] = "Batasan Hills"
 
@@ -1152,6 +1212,14 @@ Provide 2 to 3 tailored recommendations. If vulnerability flags exist, prioritiz
             f"the ensemble model classifies this family into {tier_meaning} at {confidence*100:.1f}% confidence.{vuln_note}"
         )
 
+    ai_provider = "gemini" if (interpretation and not interpretation.startswith("With a total monthly")) else "fallback"
+    is_fallback = (ai_provider == "fallback")
+    ai_note = (
+        "✨ Live Gemini AI Suggestions: Generated by KalingaBot AI using real-time demographic indicators."
+        if not is_fallback
+        else "⚡ Standard Policy Benchmarks (Offline Fallback): AI engine is currently offline or rate-limited; standard DSWD / QC-LGU benchmarks applied."
+    )
+
     return {
         "predicted_class": pred_class,
         "tier_meaning": tier_meaning,
@@ -1163,50 +1231,92 @@ Provide 2 to 3 tailored recommendations. If vulnerability flags exist, prioritiz
         "interpretation": interpretation,
         "total_monthly_income": round(total_income, 2),
         "family_size": int(family_size),
+        "ai_provider": ai_provider,
+        "is_fallback": is_fallback,
+        "ai_note": ai_note,
     }
 
 
 # ── Barangay-Level Income Classifier ─────────────────────────────────────────
 class ClassifyBarangayRequest(BaseModel):
     barangay: Optional[str] = "Custom"
-    pct_employed_head: float
-    avg_monthly_income_php: float
-    pct_with_access_to_electricity: float
-    pct_with_safe_water_access: float
-    pct_with_sanitary_toilet: float
-    net_enrollment_rate: float
-    pct_permanent_house_material: float
-    pct_informal_settlers: float
-    avg_family_size: float
-    pct_completed_secondary_education: float
+    pct_employed_head: float = Field(..., ge=0.0, le=100.0, description="Employed Household Heads must be between 0% and 100%")
+    avg_monthly_income_php: float = Field(..., gt=0.0, description="Average Monthly Income must be positive (> 0)")
+    pct_with_access_to_electricity: float = Field(..., ge=0.0, le=100.0, description="Electricity Access must be between 0% and 100%")
+    pct_with_safe_water_access: float = Field(..., ge=0.0, le=100.0, description="Safe Drinking Water Access must be between 0% and 100%")
+    pct_with_sanitary_toilet: float = Field(..., ge=0.0, le=100.0, description="Sanitary Toilet Facility must be between 0% and 100%")
+    net_enrollment_rate: float = Field(..., ge=0.0, le=100.0, description="Net School Enrollment must be between 0% and 100%")
+    pct_permanent_house_material: float = Field(..., ge=0.0, le=100.0, description="Permanent Housing Materials must be between 0% and 100%")
+    pct_informal_settlers: float = Field(..., ge=0.0, le=100.0, description="Informal Settlement Rate must be between 0% and 100%")
+    avg_family_size: float = Field(..., gt=0.0, le=30.0, description="Average Family Size must be between 1 and 30")
+    pct_completed_secondary_education: float = Field(..., ge=0.0, le=100.0, description="Secondary Education Completion must be between 0% and 100%")
 
-@app.post("/api/classify-barangay")
-def classify_barangay(req: ClassifyBarangayRequest):
+class BatchClassifyRequest(BaseModel):
+    items: List[ClassifyBarangayRequest]
+
+def evaluate_recommendation_safeguards(data: dict) -> tuple[bool, str]:
+    """Check if community inputs are within realistic socio-economic bounds before invoking AI recommendations."""
+    inc = float(data.get("avg_monthly_income_php", 0))
+    fam = float(data.get("avg_family_size", 0))
+    if inc < 1000 or inc > 300000:
+        return False, f"Average monthly income (PHP {inc:,.0f}) is outside realistic operational thresholds (PHP 1,000 – PHP 300,000)."
+    if fam < 1.0 or fam > 20.0:
+        return False, f"Average family size ({fam}) is outside realistic operational thresholds (1 – 20 members)."
+    pct_fields = [
+        ("pct_employed_head", "Employed Household Heads"),
+        ("pct_with_access_to_electricity", "Electricity Access"),
+        ("pct_with_safe_water_access", "Safe Drinking Water Access"),
+        ("pct_with_sanitary_toilet", "Sanitary Toilet Facility"),
+        ("net_enrollment_rate", "Net School Enrollment"),
+        ("pct_permanent_house_material", "Permanent Housing Materials"),
+        ("pct_informal_settlers", "Informal Settlement Rate"),
+        ("pct_completed_secondary_education", "Secondary Education Completion"),
+    ]
+    for key, label in pct_fields:
+        val = float(data.get(key, 0))
+        if val < 0.0 or val > 100.0:
+            return False, f"{label} ({val}%) is outside the valid range (0% – 100%)."
+    return True, ""
+
+def execute_barangay_classification(data: dict, enable_gemini: bool = True) -> dict:
+    """Executes ML inference, contextual feature driver calculation, recommendation safeguards, and policy advice."""
     model_obj = get_barangay_model()
     if not model_obj:
-        raise HTTPException(status_code=500, detail="Barangay ML Model not available.")
+        raise HTTPException(status_code=500, detail="Barangay ML Model is not available.")
 
     pipeline = model_obj["pipeline"]
     classes = model_obj["classes"]
     base_weights = model_obj.get("feature_importances", {})
 
+    b_name = str(data.get("barangay", "Custom")).strip()
+    pct_emp = float(data["pct_employed_head"])
+    inc = float(data["avg_monthly_income_php"])
+    elec = float(data["pct_with_access_to_electricity"])
+    water = float(data["pct_with_safe_water_access"])
+    toilet = float(data["pct_with_sanitary_toilet"])
+    enroll = float(data["net_enrollment_rate"])
+    perm = float(data["pct_permanent_house_material"])
+    informal = float(data["pct_informal_settlers"])
+    fam_size = float(data["avg_family_size"])
+    sec_ed = float(data["pct_completed_secondary_education"])
+
     input_df = pd.DataFrame([{
-        "pct_employed_head": req.pct_employed_head,
-        "avg_monthly_income_php": req.avg_monthly_income_php,
-        "pct_with_access_to_electricity": req.pct_with_access_to_electricity,
-        "pct_with_safe_water_access": req.pct_with_safe_water_access,
-        "pct_with_sanitary_toilet": req.pct_with_sanitary_toilet,
-        "net_enrollment_rate": req.net_enrollment_rate,
-        "pct_permanent_house_material": req.pct_permanent_house_material,
-        "pct_informal_settlers": req.pct_informal_settlers,
-        "avg_family_size": req.avg_family_size,
-        "pct_completed_secondary_education": req.pct_completed_secondary_education,
+        "pct_employed_head": pct_emp,
+        "avg_monthly_income_php": inc,
+        "pct_with_access_to_electricity": elec,
+        "pct_with_safe_water_access": water,
+        "pct_with_sanitary_toilet": toilet,
+        "net_enrollment_rate": enroll,
+        "pct_permanent_house_material": perm,
+        "pct_informal_settlers": informal,
+        "avg_family_size": fam_size,
+        "pct_completed_secondary_education": sec_ed,
     }])
 
     try:
         probs = pipeline.predict_proba(input_df)[0]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Inference error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Barangay inference error: {str(e)}")
 
     best_idx = int(np.argmax(probs))
     pred_class = classes[best_idx]
@@ -1214,16 +1324,16 @@ def classify_barangay(req: ClassifyBarangayRequest):
     prob_dict = {c: float(probs[i]) for i, c in enumerate(classes)}
 
     user_vals = {
-        "Employed Household Heads": req.pct_employed_head,
-        "Average Monthly Income": req.avg_monthly_income_php,
-        "Electricity Access": req.pct_with_access_to_electricity,
-        "Safe Drinking Water Access": req.pct_with_safe_water_access,
-        "Sanitary Toilet Facility": req.pct_with_sanitary_toilet,
-        "Net School Enrollment": req.net_enrollment_rate,
-        "Permanent Housing Materials": req.pct_permanent_house_material,
-        "Informal Settlement Rate": req.pct_informal_settlers,
-        "Average Family Size": req.avg_family_size,
-        "Secondary Education Completion": req.pct_completed_secondary_education,
+        "Employed Household Heads": pct_emp,
+        "Average Monthly Income": inc,
+        "Electricity Access": elec,
+        "Safe Drinking Water Access": water,
+        "Sanitary Toilet Facility": toilet,
+        "Net School Enrollment": enroll,
+        "Permanent Housing Materials": perm,
+        "Informal Settlement Rate": informal,
+        "Average Family Size": fam_size,
+        "Secondary Education Completion": sec_ed,
     }
 
     NORMS = {
@@ -1304,7 +1414,7 @@ def classify_barangay(req: ClassifyBarangayRequest):
         },
         "Average Family Size": {
             "format": lambda v: f"{v:.1f} members",
-            "desc": "Dependency load sharing household livelihood"
+            "desc": "Headcount sharing household livelihood"
         },
     }
 
@@ -1336,33 +1446,55 @@ def classify_barangay(req: ClassifyBarangayRequest):
         "Level 3 · High-Income"
     )
 
-    # ── KalingaBot RAG AI Suggestions ────────────────────────────────────────
+    tier_meaning = (
+        "Survival · Critical Needs" if pred_class == "Low" else
+        "Subsistence · Moderate Needs" if pred_class == "Middle" else
+        "Self-Sufficient · Stable"
+    )
+
+    # ── Recommendation Safeguards Check ──────────────────────────────────────
+    is_in_range, safeguard_reason = evaluate_recommendation_safeguards(data)
+
     interpretation = None
     recommendations = []
+    ai_provider = "none"
+    is_fallback = False
+    ai_note = ""
 
-    if GEMINI_CLIENT:
-        try:
-            top_drivers_str = ", ".join(
-                [f"{f['feature']} ({f['impact']}%)" for f in feature_impacts[:3]]
-            )
-            barangay_str = f"Barangay {req.barangay}" if req.barangay and req.barangay != "Custom" else "a District V community"
-            ai_prompt = f"""You are KalingaBot, a Philippine social welfare AI assistant for Quezon City District V.
-A barangay-level income classification was just completed using a Stacking Ensemble ML model (PSA MPI + FIES indicators).
+    if not is_in_range:
+        # Safeguard active: do NOT generate AI recommendations on out-of-range inputs
+        ai_provider = "safeguarded"
+        is_fallback = False
+        ai_note = f"⚠️ Recommendation Safeguard: AI suggestions withheld because {safeguard_reason}"
+        interpretation = (
+            f"Barangay {b_name} was classified as {tier_label} ({confidence*100:.1f}% confidence) based on model indicators. "
+            f"However, automated policy recommendations are withheld because one or more values fell outside safe operational ranges."
+        )
+    else:
+        # Inputs are valid: attempt Gemini AI if enabled & client available
+        if enable_gemini and GEMINI_CLIENT:
+            try:
+                top_drivers_str = ", ".join(
+                    [f"{f['feature']} ({f['impact']}%)" for f in feature_impacts[:3]]
+                )
+                barangay_str = f"Barangay {b_name}" if b_name and b_name != "Custom" else "a District V community"
+                ai_prompt = f"""You are KalingaBot, a Philippine social welfare AI assistant for Quezon City District V.
+A barangay-level income classification was completed using a Stacking Ensemble ML model (PSA MPI + FIES indicators).
 
 Barangay: {barangay_str}, Quezon City District V
 Predicted Income Tier: {tier_label} (confidence: {confidence*100:.1f}%)
 
 Community PSA Indicators:
-- Household Head Employment Rate: {req.pct_employed_head:.1f}%
-- Average Monthly Income: PHP {req.avg_monthly_income_php:,.0f}
-- Access to Electricity: {req.pct_with_access_to_electricity:.1f}%
-- Safe Drinking Water Access: {req.pct_with_safe_water_access:.1f}%
-- Sanitary Toilet Coverage: {req.pct_with_sanitary_toilet:.1f}%
-- Youth Net School Enrollment: {req.net_enrollment_rate:.1f}%
-- Permanent Housing Materials: {req.pct_permanent_house_material:.1f}%
-- Informal Settlement Rate: {req.pct_informal_settlers:.1f}%
-- Average Family Size: {req.avg_family_size:.1f} members
-- Secondary Education Completion: {req.pct_completed_secondary_education:.1f}%
+- Household Head Employment Rate: {pct_emp:.1f}%
+- Average Monthly Income: PHP {inc:,.0f}
+- Access to Electricity: {elec:.1f}%
+- Safe Drinking Water Access: {water:.1f}%
+- Sanitary Toilet Coverage: {toilet:.1f}%
+- Youth Net School Enrollment: {enroll:.1f}%
+- Permanent Housing Materials: {perm:.1f}%
+- Informal Settlement Rate: {informal:.1f}%
+- Average Family Size: {fam_size:.1f} members
+- Secondary Education Completion: {sec_ed:.1f}%
 - Top Model Drivers: {top_drivers_str}
 
 Respond ONLY with valid JSON matching this schema exactly:
@@ -1379,65 +1511,366 @@ Respond ONLY with valid JSON matching this schema exactly:
 }}
 Provide 3 tailored recommendations targeting the barangay's weakest indicators."""
 
-            resp = GEMINI_CLIENT.models.generate_content(
-                model=GEMINI_MODEL,
-                contents=ai_prompt,
-                config=types.GenerateContentConfig(
-                    temperature=0.3,
-                    response_mime_type="application/json",
-                ),
+                resp = GEMINI_CLIENT.models.generate_content(
+                    model=GEMINI_MODEL,
+                    contents=ai_prompt,
+                    config=types.GenerateContentConfig(
+                        temperature=0.3,
+                        response_mime_type="application/json",
+                    ),
+                )
+                ai_data = json.loads(resp.text.strip())
+                interpretation = ai_data.get("interpretation")
+                recommendations = ai_data.get("recommendations", [])
+                if recommendations:
+                    ai_provider = "gemini"
+                    is_fallback = False
+                    ai_note = "✨ Live Gemini AI Suggestions: Tailored by KalingaBot AI using real-time community indicators."
+            except Exception as e:
+                print(f"Warning: Gemini live recommendations failed ({e}), using verified policy fallback.")
+
+        # If Gemini is unavailable or not used, apply verified standard DSWD / QC-LGU benchmarks
+        if not recommendations:
+            ai_provider = "fallback"
+            is_fallback = True
+            ai_note = "⚡ Standard DSWD / QC-LGU Policy Benchmarks (Offline Fallback): AI service offline or rate-limited; standard evidence-based policy guidelines applied."
+            if pred_class == "Low":
+                recommendations = [
+                    {"name": "DSWD Pantawid Pamilyang Pilipino Program (4Ps)", "agency": "DSWD", "sector": "Financial Support",
+                     "rationale": f"Conditional cash transfers to address the barangay's low average income of PHP {inc:,.0f} and support basic nutritional and healthcare needs."},
+                    {"name": "NHA Community Mortgage Program", "agency": "NHA / QC Housing Board", "sector": "Housing",
+                     "rationale": f"Addresses the {informal:.1f}% informal settler rate by providing affordable land tenure and upgrading permanent housing structures."},
+                    {"name": "DSWD Sustainable Livelihood Program (SLP)", "agency": "DSWD / DOLE", "sector": "Livelihood",
+                     "rationale": f"Micro-enterprise seed grants and skill building to elevate the {pct_emp:.1f}% household head employment rate."},
+                ]
+            elif pred_class == "Middle":
+                recommendations = [
+                    {"name": "DOLE TUPAD Community Employment Program", "agency": "DOLE", "sector": "Livelihood",
+                     "rationale": f"Short-term wage employment to stabilize the {pct_emp:.1f}% employment rate and build economic resiliency."},
+                    {"name": "TESDA Community-Based Vocational Training", "agency": "TESDA / QC Skills Academy", "sector": "Education",
+                     "rationale": f"Vocational certifications targeting the {sec_ed:.1f}% secondary completion rate to expand adult wage opportunities."},
+                    {"name": "DPWH Basic Infrastructure Program", "agency": "DPWH / QC LGU", "sector": "Housing",
+                     "rationale": f"Upgrades public drainage and infrastructure to support {perm:.1f}% permanent structures and address urban density."},
+                ]
+            else:
+                recommendations = [
+                    {"name": "QC Small Business & MSME Development Program", "agency": "QC SBCorp / DTI", "sector": "Livelihood",
+                     "rationale": f"Capital access and mentorship for the self-sufficient community to sustain its PHP {inc:,.0f} average monthly income."},
+                    {"name": "DepEd Alternative Learning System (ALS)", "agency": "DepEd / QC Schools Division", "sector": "Education",
+                     "rationale": f"Targeted youth educational catch-up to build upon the {enroll:.1f}% net school enrollment rate."},
+                    {"name": "DOH PhilHealth Konsulta Program", "agency": "DOH / PhilHealth", "sector": "Health",
+                     "rationale": f"Comprehensive primary health care access to protect household health gains and maintain productivity."},
+                ]
+
+        if not interpretation:
+            interpretation = (
+                f"With an average monthly income of PHP {inc:,.0f} and a {pct_emp:.1f}% "
+                f"household employment rate, the ML model classifies Barangay {b_name} as {tier_label} at {confidence*100:.1f}% confidence. "
+                f"The {informal:.1f}% informal settlement rate and {sec_ed:.1f}% secondary completion rate serve as primary decision drivers."
             )
-            ai_data = json.loads(resp.text.strip())
-            interpretation = ai_data.get("interpretation")
-            recommendations = ai_data.get("recommendations", [])
-        except Exception as e:
-            print(f"Warning: KalingaBot barangay suggestions failed: {e}")
-
-    # Fallback static recommendations when Gemini is unavailable
-    if not recommendations:
-        if pred_class == "Low":
-            recommendations = [
-                {"name": "DSWD Pantawid Pamilyang Pilipino Program (4Ps)", "agency": "DSWD", "sector": "Financial Support",
-                 "rationale": f"Conditional cash transfers to address the barangay's low average income of PHP {req.avg_monthly_income_php:,.0f} and support basic household needs."},
-                {"name": "NHA Community Mortgage Program", "agency": "NHA / QC Housing Board", "sector": "Housing",
-                 "rationale": f"Addresses the {req.pct_informal_settlers:.1f}% informal settler rate by providing affordable land tenure and improved housing materials."},
-                {"name": "DSWD Sustainable Livelihood Program (SLP)", "agency": "DSWD / DOLE", "sector": "Livelihood",
-                 "rationale": f"Micro-enterprise grants and skills training to improve the {req.pct_employed_head:.1f}% household employment rate."},
-            ]
-        elif pred_class == "Middle":
-            recommendations = [
-                {"name": "DOLE TUPAD Community Employment Program", "agency": "DOLE", "sector": "Livelihood",
-                 "rationale": f"Short-term wage employment to stabilize the {req.pct_employed_head:.1f}% employment rate and support upward income mobility."},
-                {"name": "TESDA Community-Based Vocational Training", "agency": "TESDA / QC Skills Academy", "sector": "Education",
-                 "rationale": f"Vocational upskilling targeting the {req.pct_completed_secondary_education:.1f}% secondary completion rate to increase earning capacity."},
-                {"name": "DPWH Basic Infrastructure Program", "agency": "DPWH / QC LGU", "sector": "Housing",
-                 "rationale": f"Infrastructure improvements to address {req.pct_informal_settlers:.1f}% informal settlements and upgrade the {req.pct_permanent_house_material:.1f}% permanent housing rate."},
-            ]
-        else:
-            recommendations = [
-                {"name": "QC Small Business \u0026 MSME Development Program", "agency": "QC SBCorp / DTI", "sector": "Livelihood",
-                 "rationale": f"Supports enterprise growth for the self-sufficient barangay to sustain its PHP {req.avg_monthly_income_php:,.0f} average monthly income."},
-                {"name": "DepEd Alternative Learning System (ALS)", "agency": "DepEd / QC Schools Division", "sector": "Education",
-                 "rationale": f"Addresses remaining education gaps with {req.net_enrollment_rate:.1f}% school enrollment to ensure continued human capital development."},
-                {"name": "DOH PhilHealth Konsulta Program", "agency": "DOH / PhilHealth", "sector": "Health",
-                 "rationale": f"Primary health care access to maintain the barangay's stable quality of life indicators."},
-            ]
-
-    if not interpretation:
-        interpretation = (
-            f"With an average monthly income of PHP {req.avg_monthly_income_php:,.0f} and a {req.pct_employed_head:.1f}% "
-            f"household employment rate, the ML model classifies this barangay as {tier_label} at {confidence*100:.1f}% confidence. "
-            f"The {req.pct_informal_settlers:.1f}% informal settlement rate and {req.pct_completed_secondary_education:.1f}% secondary completion rate are key socio-economic indicators."
-        )
 
     return {
+        "barangay": b_name,
         "predicted_class": pred_class,
         "tier_label": tier_label,
+        "tier_meaning": tier_meaning,
         "confidence": confidence,
         "probabilities": prob_dict,
         "feature_impacts": feature_impacts,
         "interpretation": interpretation,
         "recommendations": recommendations,
+        "ai_provider": ai_provider,
+        "is_fallback": is_fallback,
+        "ai_note": ai_note,
+        "inputs": {
+            "Avg Monthly Income": f"PHP {inc:,.0f}",
+            "Employed Heads": f"{pct_emp:.1f}%",
+            "Informal Settlers": f"{informal:.1f}%",
+            "Electricity Access": f"{elec:.1f}%",
+            "Safe Water Access": f"{water:.1f}%",
+            "Sanitary Toilet": f"{toilet:.1f}%",
+            "Permanent Housing": f"{perm:.1f}%",
+            "School Enrollment": f"{enroll:.1f}%",
+            "Secondary Educated": f"{sec_ed:.1f}%",
+            "Avg Family Size": f"{fam_size:.1f}",
+        },
+        "raw_inputs": {
+            "barangay": b_name,
+            "pct_employed_head": pct_emp,
+            "avg_monthly_income_php": inc,
+            "pct_with_access_to_electricity": elec,
+            "pct_with_safe_water_access": water,
+            "pct_with_sanitary_toilet": toilet,
+            "net_enrollment_rate": enroll,
+            "pct_permanent_house_material": perm,
+            "pct_informal_settlers": informal,
+            "avg_family_size": fam_size,
+            "pct_completed_secondary_education": sec_ed,
+        }
+    }
+
+@app.post("/api/classify-barangay")
+def classify_barangay(req: ClassifyBarangayRequest):
+    return execute_barangay_classification(req.dict(), enable_gemini=True)
+
+@app.post("/api/classify-barangay/batch")
+def classify_barangay_batch(req: BatchClassifyRequest):
+    """Processes a list of barangay profiles in a single high-performance run."""
+    results = []
+    # For batch runs, we enable Gemini on up to the first 2 items to prevent API rate limiting,
+    # and provide fast verified fallback for subsequent items.
+    for i, item in enumerate(req.items):
+        try:
+            res = execute_barangay_classification(item.dict(), enable_gemini=(i < 2))
+            results.append({"status": "success", "data": res})
+        except Exception as e:
+            results.append({"status": "error", "barangay": item.barangay, "error": str(e)})
+
+    return {
+        "total": len(req.items),
+        "successful": sum(1 for r in results if r["status"] == "success"),
+        "failed": sum(1 for r in results if r["status"] == "error"),
+        "results": results,
+    }
+
+def _parse_clean_number(val, default=0.0):
+    if val is None or pd.isna(val):
+        return default
+    if isinstance(val, (int, float)):
+        return float(val)
+    s = str(val).strip().replace("₱", "").replace("%", "").replace(",", "").replace("PHP", "").strip()
+    try:
+        return float(s)
+    except Exception:
+        return default
+
+@app.post("/api/classify-barangay/batch-file")
+async def classify_barangay_batch_file(file: UploadFile = File(...)):
+    """Upload a CSV or Excel file to classify multiple barangays simultaneously."""
+    filename = file.filename.lower()
+    contents = await file.read()
+
+    try:
+        if filename.endswith(".xlsx") or filename.endswith(".xls"):
+            df = pd.read_excel(io.BytesIO(contents))
+        elif filename.endswith(".csv") or filename.endswith(".txt"):
+            try:
+                df = pd.read_csv(io.StringIO(contents.decode("utf-8-sig")))
+            except Exception:
+                try:
+                    df = pd.read_csv(io.StringIO(contents.decode("utf-8")))
+                except UnicodeDecodeError:
+                    df = pd.read_csv(io.StringIO(contents.decode("latin-1")))
+        else:
+            raise HTTPException(status_code=400, detail="Invalid file format. Please upload a .csv or .xlsx file.")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to parse file: {str(e)}")
+
+    if df.empty:
+        raise HTTPException(status_code=400, detail="The uploaded file contains no data rows.")
+
+    # Clean all column names: aggressively strip BOM, quotes, whitespace, hidden chars
+    def _normalize_col(c: str) -> str:
+        return (
+            str(c)
+            .replace("\ufeff", "").replace("\uffef", "")
+            .replace('"', "").replace("'", "")
+            .replace("\xa0", " ")  # non-breaking space
+            .strip()
+            .lower()
+        )
+
+    normalized_cols = {_normalize_col(c): c for c in df.columns}
+    logger.info(f"[batch-file] Detected columns: {list(normalized_cols.keys())}")
+
+    # Robust keyword mapping — order matters: first match wins, more specific first
+    KEYWORD_MAPPINGS = {
+        "barangay": ["barangay", "brgy", "jurisdiction", "community", "target", "area"],
+        "avg_monthly_income_php": ["income", "monthly income", "salary", "earning"],
+        "pct_employed_head": ["employ", "working head", "head employ"],
+        "pct_informal_settlers": ["informal", "settler", "tenure", "squatter"],
+        "pct_with_access_to_electricity": ["electr", "power", "grid"],
+        "pct_with_safe_water_access": ["safe water", "water access", "potable", "drinking"],
+        "pct_with_sanitary_toilet": ["toilet", "sanitary", "latrine", "comfort room"],
+        "net_enrollment_rate": ["enroll", "school attend", "student"],
+        "pct_permanent_house_material": ["permanent hous", "permanent", "concrete", "house material"],
+        "pct_completed_secondary_education": ["secondary", "high school", "educat"],
+        "avg_family_size": ["family size", "household size", "family", "members"],
+    }
+
+    col_map = {}
+    used_orig_cols: set = set()
+
+    for canon_field, keywords in KEYWORD_MAPPINGS.items():
+        matched = None
+        matched_orig = None
+
+        # 1. Exact canonical name match
+        if canon_field in normalized_cols and normalized_cols[canon_field] not in used_orig_cols:
+            matched = canon_field
+            matched_orig = normalized_cols[canon_field]
+
+        # 2. Multi-word phrase match (most specific first)
+        if not matched:
+            for kw in sorted(keywords, key=len, reverse=True):
+                for norm_c, orig_c in normalized_cols.items():
+                    if orig_c in used_orig_cols:
+                        continue
+                    if kw in norm_c:
+                        matched = norm_c
+                        matched_orig = orig_c
+                        break
+                if matched:
+                    break
+
+        if matched_orig:
+            col_map[canon_field] = matched_orig
+            used_orig_cols.add(matched_orig)
+
+    # Positional fallback for template-format CSVs (exactly 11 or 12 cols)
+    # Expected order: barangay, income, employed%, informal%, electricity%, water%, toilet%, permanent%, enrollment%, secondary%, family_size [, extra]
+    POSITIONAL_ORDER = [
+        "barangay", "avg_monthly_income_php", "pct_employed_head",
+        "pct_informal_settlers", "pct_with_access_to_electricity",
+        "pct_with_safe_water_access", "pct_with_sanitary_toilet",
+        "pct_permanent_house_material", "net_enrollment_rate",
+        "pct_completed_secondary_education", "avg_family_size",
+    ]
+    missing_after_kw = [f for f in KEYWORD_MAPPINGS.keys() if f not in col_map]
+    if missing_after_kw and len(df.columns) >= 11:
+        orig_cols = list(df.columns)
+        for i, canon in enumerate(POSITIONAL_ORDER):
+            if canon not in col_map and i < len(orig_cols):
+                col_map[canon] = orig_cols[i]
+                logger.warning(f"[batch-file] Positional fallback: '{canon}' → col[{i}] '{orig_cols[i]}'")
+
+    # Required fields check
+    missing = [f for f in KEYWORD_MAPPINGS.keys() if f not in col_map]
+    if missing:
+        readable_missing = ", ".join(missing)
+        detected_cols = ", ".join(normalized_cols.keys())
+        raise HTTPException(
+            status_code=422,
+            detail=f"Uploaded file is missing required columns: {readable_missing}. Detected headers: [{detected_cols}]. Please download the official CSV template and use matching column names."
+        )
+
+    results = []
+    errors = []
+
+    for idx, row in df.iterrows():
+        row_num = idx + 2  # 1-based index including header
+        try:
+            b_name = str(row[col_map["barangay"]]).strip() if pd.notna(row[col_map["barangay"]]) else f"Barangay {idx+1}"
+            inc = _parse_clean_number(row[col_map["avg_monthly_income_php"]], default=0.0)
+            fam = _parse_clean_number(row[col_map["avg_family_size"]], default=1.0)
+            emp = _parse_clean_number(row[col_map["pct_employed_head"]], default=0.0)
+            elec = _parse_clean_number(row[col_map["pct_with_access_to_electricity"]], default=0.0)
+            water = _parse_clean_number(row[col_map["pct_with_safe_water_access"]], default=0.0)
+            toilet = _parse_clean_number(row[col_map["pct_with_sanitary_toilet"]], default=0.0)
+            enroll = _parse_clean_number(row[col_map["net_enrollment_rate"]], default=0.0)
+            perm = _parse_clean_number(row[col_map["pct_permanent_house_material"]], default=0.0)
+            informal = _parse_clean_number(row[col_map["pct_informal_settlers"]], default=0.0)
+            sec_ed = _parse_clean_number(row[col_map["pct_completed_secondary_education"]], default=0.0)
+
+            # Row validation
+            row_errs = []
+            if inc <= 0:
+                row_errs.append("Average Monthly Income must be positive (> 0)")
+            if fam <= 0 or fam > 30:
+                row_errs.append("Average Family Size must be between 1 and 30")
+            for val, name in [
+                (emp, "Employed Heads"), (elec, "Electricity Access"), (water, "Safe Water Access"),
+                (toilet, "Sanitary Toilet"), (enroll, "School Enrollment"), (perm, "Permanent Housing"),
+                (informal, "Informal Settlers"), (sec_ed, "Secondary Education")
+            ]:
+                if val < 0.0 or val > 100.0:
+                    row_errs.append(f"{name} must be between 0% and 100% (found {val})")
+
+            if row_errs:
+                errors.append({"row": row_num, "barangay": b_name, "errors": row_errs})
+                continue
+
+            item_dict = {
+                "barangay": b_name,
+                "pct_employed_head": emp,
+                "avg_monthly_income_php": inc,
+                "pct_with_access_to_electricity": elec,
+                "pct_with_safe_water_access": water,
+                "pct_with_sanitary_toilet": toilet,
+                "net_enrollment_rate": enroll,
+                "pct_permanent_house_material": perm,
+                "pct_informal_settlers": informal,
+                "avg_family_size": fam,
+                "pct_completed_secondary_education": sec_ed,
+            }
+
+            classification_res = execute_barangay_classification(item_dict, enable_gemini=(len(results) < 2))
+            results.append(classification_res)
+        except Exception as e:
+            errors.append({"row": row_num, "barangay": str(row.get(col_map.get("barangay", ""), f"Row {row_num}")), "errors": [str(e)]})
+
+    return {
+        "filename": file.filename,
+        "total_rows": len(df),
+        "successful": len(results),
+        "failed": len(errors),
+        "results": results,
+        "errors": errors,
+    }
+
+@app.get("/api/classify-barangay/batch-template")
+def get_batch_template():
+    """Generates an official downloadable CSV template for batch multi-barangay classification."""
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "Barangay Jurisdiction",
+        "Average Monthly Income",
+        "Employed Heads (%)",
+        "Informal Settlers (%)",
+        "Electricity Access (%)",
+        "Safe Water Access (%)",
+        "Sanitary Toilet (%)",
+        "Permanent Housing (%)",
+        "School Enrollment (%)",
+        "Secondary Educated (%)",
+        "Average Family Size",
+    ])
+    # 14 Real District V Barangays with sample reference values
+    samples = [
+        ["Bagbag", 24500, 56.4, 34.2, 74.0, 68.0, 66.5, 52.0, 79.5, 53.0, 5.2],
+        ["Capri", 17200, 48.0, 48.5, 66.0, 55.0, 52.0, 39.0, 72.0, 38.0, 5.6],
+        ["Fairview", 38000, 76.5, 12.0, 92.0, 88.0, 86.0, 78.0, 91.0, 75.0, 4.4],
+        ["Greater Lagro", 34500, 72.0, 16.5, 88.0, 82.0, 81.0, 72.0, 88.0, 70.0, 4.6],
+        ["Gulod", 22800, 54.0, 38.0, 72.0, 64.0, 62.0, 48.0, 78.0, 50.0, 5.3],
+        ["Kaligayahan", 28500, 62.0, 26.0, 80.0, 74.0, 72.0, 60.0, 84.0, 60.0, 4.9],
+        ["Nagkaisang Nayon", 23500, 55.0, 35.0, 73.0, 66.0, 64.0, 50.0, 78.5, 52.0, 5.1],
+        ["North Fairview", 36000, 74.0, 14.0, 90.0, 85.0, 84.0, 75.0, 89.0, 72.0, 4.5],
+        ["Novaliches Proper", 26000, 60.0, 29.0, 78.0, 70.0, 69.0, 56.0, 82.0, 57.0, 5.0],
+        ["Pasong Putik Proper", 31000, 68.0, 20.0, 84.0, 78.0, 77.0, 66.0, 86.0, 65.0, 4.7],
+        ["San Agustin", 27000, 61.0, 27.5, 79.0, 72.0, 70.5, 58.0, 83.0, 58.0, 4.9],
+        ["San Bartolome", 29000, 64.0, 24.0, 82.0, 76.0, 74.0, 62.0, 85.0, 62.0, 4.8],
+        ["Santa Lucia", 25000, 58.0, 32.0, 75.0, 68.5, 67.0, 54.0, 80.0, 55.0, 5.1],
+        ["Santa Monica", 30000, 66.0, 22.0, 83.0, 77.0, 75.5, 64.0, 85.5, 63.5, 4.8],
+    ]
+    for row in samples:
+        writer.writerow(row)
+
+    content = output.getvalue()
+    return Response(
+        content=content,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=qc_district_v_barangay_batch_template.csv"}
+    )
+
+@app.get("/api/keep-alive")
+def keep_alive():
+    """Lightweight ping to prevent cold start hibernation."""
+    return {
+        "status": "warm",
+        "uptime": time.time(),
+        "barangay_model_cached": "barangay_model" in _CACHE,
+        "individual_model_cached": "individual_model" in _CACHE,
     }
 
 @app.get("/api/geojson/polygons")
@@ -1448,5 +1881,5 @@ def get_geojson():
     return {"type": "FeatureCollection", "features": []}
 
 @app.get("/health")
-def health():
+def health_endpoint():
     return {"status": "healthy", "service": "District V API"}

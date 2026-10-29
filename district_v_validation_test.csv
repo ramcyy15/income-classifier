@@ -1,0 +1,9 @@
+Barangay Jurisdiction,Average Monthly Income,Employed Heads (%),Informal Settlers (%),Electricity Access (%),Safe Water Access (%),Sanitary Toilet (%),Permanent Housing (%),School Enrollment (%),Secondary Educated (%),Average Family Size,Test Scenario Description
+Fairview,38000,76.5,12.0,92.0,88.0,86.0,78.0,91.0,75.0,4.4,Valid Level 3 Baseline
+Capri,17200,48.0,48.5,66.0,55.0,52.0,39.0,72.0,38.0,5.6,Valid Level 1 Baseline
+Bagbag,24500,56.4,34.2,74.0,68.0,66.5,52.0,79.5,53.0,5.2,Valid Level 2 Baseline
+Test Invalid Income,-5000,55.0,30.0,75.0,65.0,65.0,50.0,80.0,50.0,5.0,Should Flag: Negative Monthly Income
+Test Over Enrollment,26000,60.0,25.0,80.0,70.0,70.0,60.0,150.0,55.0,5.0,Should Flag: Enrollment > 100%
+Test Negative Percent,22000,-10.0,40.0,70.0,60.0,60.0,45.0,75.0,45.0,5.0,Should Flag: Negative Employment %
+Test Extreme Outlier,850000,95.0,2.0,99.0,98.0,98.0,95.0,98.0,95.0,3.5,Safeguard Test: Extreme Outlier Income
+

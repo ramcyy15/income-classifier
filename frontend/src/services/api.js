@@ -89,7 +89,10 @@ export async function classifyIndividual(payload) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.detail || 'Individual classification failed');
+  }
   return res.json();
 }
 
@@ -99,7 +102,42 @@ export async function classifyBarangay(payload) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.detail || 'Barangay classification failed');
+  }
   return res.json();
+}
+
+export async function classifyBarangayBatch(items) {
+  const res = await fetch(`${API_BASE}/classify-barangay/batch`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items }),
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.detail || 'Batch classification failed');
+  }
+  return res.json();
+}
+
+export async function uploadBarangayBatchFile(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const res = await fetch(`${API_BASE}/classify-barangay/batch-file`, {
+    method: 'POST',
+    body: formData,
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.detail || 'Failed to process batch upload file');
+  }
+  return res.json();
+}
+
+export function getBatchTemplateDownloadUrl() {
+  return `${API_BASE}/classify-barangay/batch-template`;
 }
 
