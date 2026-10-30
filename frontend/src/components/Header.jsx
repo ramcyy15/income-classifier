@@ -11,10 +11,10 @@ export default function Header() {
       <header className="h-20 bg-[#EEF2F6]/85 backdrop-blur-xl border-b border-white/80 shadow-[0_4px_16px_rgba(166,180,200,0.2)] px-8 flex items-center justify-between sticky top-0 z-20">
         <div>
           <h1 className="text-lg font-semibold tracking-[-0.025em] text-slate-900">
-            District V Socio-Economic Income Classification
+            District V Barangay Income Levels
           </h1>
-          <p className="text-[11px] font-mono text-slate-500 tracking-[0.02em]">
-            Stacking Ensemble ML Model · Random Forest + Gradient Boosting → Logistic Regression
+          <p className="text-[11px] text-slate-500">
+            Quezon City · Find the barangays that need help most
           </p>
         </div>
 
@@ -23,7 +23,7 @@ export default function Header() {
           <button
             onClick={() => setBotModalOpen(true)}
             className="flex items-center gap-2.5 py-1.5 px-3.5 neu-btn rounded-xl group cursor-pointer"
-            title="Learn about KalingaBot AI"
+            title="About KalingaBot"
           >
             <div className="w-6 h-6 rounded-lg neu-inset-sm p-0.5 flex items-center justify-center flex-shrink-0">
               <img
@@ -36,7 +36,7 @@ export default function Header() {
               <p className="text-[11px] font-bold text-indigo-950 flex items-center gap-1">
                 KalingaBot <Sparkles className="w-2.5 h-2.5 text-amber-500 fill-amber-500" />
               </p>
-              <p className="text-[9px] text-indigo-600 font-medium font-mono">Who is he?</p>
+              <p className="text-[9px] text-indigo-600 font-medium">Your helper</p>
             </div>
           </button>
         </div>

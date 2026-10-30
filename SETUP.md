@@ -15,7 +15,7 @@ A React + Tailwind CSS dashboard with a FastAPI machine learning backend for hou
 
 ### 1. Python Backend Dependencies
 ```bash
-pip install fastapi uvicorn pandas numpy scikit-learn xgboost shap joblib openpyxl
+pip install -r requirements.txt
 ```
 
 ### 2. Frontend Dependencies
@@ -55,8 +55,8 @@ npm run dev
 
 ## Retraining the Model (Optional)
 
-To rebuild the stacking ensemble model, SHAP values, and dataset aggregates:
+To rebuild the barangay stacking ensemble model (Random Forest + XGBoost -> Logistic Regression):
 ```bash
-python build_stacking_model.py
+python train_barangay_model.py
 ```
-Outputs are saved to `models/stacking_model.joblib` and `outputs/`.
+The model is saved to `models/barangay_stacking_model.joblib`.

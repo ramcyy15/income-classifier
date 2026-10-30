@@ -69,7 +69,7 @@ export default function SystemPage({ onEnterApp }) {
             }`}
           >
             <Server className="w-3.5 h-3.5" />
-            <span>Cloud Engine</span>
+            <span>Server</span>
             {isServerWaking && (
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
             )}
@@ -84,7 +84,7 @@ export default function SystemPage({ onEnterApp }) {
             }`}
           >
             <Database className="w-3.5 h-3.5" />
-            <span>Supabase DB</span>
+            <span>Database</span>
             {isDBPaused && (
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
             )}
@@ -115,13 +115,13 @@ export default function SystemPage({ onEnterApp }) {
             {/* (Words / Status / State of the System) */}
             <div className="space-y-2 mb-8">
               <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-amber-600 block">
-                Database Paused
+                Saving is paused
               </span>
               <h2 className="text-xl font-bold tracking-tight text-slate-900">
-                Supabase Instance Hibernated
+                The database is asleep
               </h2>
               <p className="text-xs text-slate-500 leading-relaxed max-w-xs mx-auto">
-                Free-tier compute paused after 7 days of inactivity. ML models work 100% offline without the database.
+                You can still check barangays.
               </p>
             </div>
 
@@ -133,7 +133,7 @@ export default function SystemPage({ onEnterApp }) {
                 rel="noopener noreferrer"
                 className="w-full flex items-center justify-center gap-2 py-3 px-4 neu-btn-primary text-white rounded-xl text-xs font-semibold shadow-md cursor-pointer"
               >
-                <span>Unpause on Supabase</span>
+                <span>Wake database</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
 
@@ -141,7 +141,7 @@ export default function SystemPage({ onEnterApp }) {
                 onClick={handleContinue}
                 className="w-full flex items-center justify-center gap-2 py-2.5 px-4 neu-btn rounded-xl text-xs font-semibold text-slate-700 cursor-pointer"
               >
-                <span>Continue to Classifier (Offline Mode)</span>
+                <span>Continue anyway</span>
                 <ArrowRight className="w-3.5 h-3.5 text-slate-500" />
               </button>
             </div>
@@ -181,13 +181,13 @@ export default function SystemPage({ onEnterApp }) {
             {/* (Words / Status / State of the System) */}
             <div className="space-y-2 mb-8">
               <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-indigo-600 block">
-                Cloud Server Starting
+                Starting up
               </span>
               <h2 className="text-xl font-bold tracking-tight text-slate-900">
-                Waking ML Engine
+                Please wait
               </h2>
               <p className="text-xs text-slate-500 leading-relaxed max-w-xs mx-auto">
-                Free instances hibernate when inactive. Starting runtime and loading models (~25–30s).
+                This takes about 30 seconds.
               </p>
               <div className="pt-1">
                 <span className="inline-block text-[11px] font-mono font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 rounded-full">
@@ -202,7 +202,7 @@ export default function SystemPage({ onEnterApp }) {
                 onClick={handleContinue}
                 className="w-full flex items-center justify-center gap-2 py-3 px-4 neu-btn rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 cursor-pointer"
               >
-                <span>Enter Workspace (Draft Form Now)</span>
+                <span>Start filling in the form</span>
                 <ArrowRight className="w-3.5 h-3.5 text-slate-500" />
               </button>
             </div>
@@ -224,7 +224,7 @@ export default function SystemPage({ onEnterApp }) {
 
       {/* Discreet footer watermark */}
       <p className="absolute bottom-6 text-[11px] font-mono text-slate-400 tracking-wide">
-        District V Socio-Economic Income Classification System
+        District V Barangay Income Levels
       </p>
     </div>
   );

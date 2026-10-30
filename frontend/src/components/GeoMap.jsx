@@ -1,10 +1,13 @@
-import React, { useEffect, useState } from "react";
-import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaflet";
-import { Landmark, Navigation, MapPin, Layers } from "lucide-react";
+import React, { useEffect } from "react";
+import { MapContainer, TileLayer, CircleMarker, GeoJSON, useMap } from "react-leaflet";
+import L from "leaflet";
+import { Landmark, Navigation } from "lucide-react";
+import districtGeo from "../data/districtV.geo.json";
+import { levelOf } from "../constants/levels";
 import "leaflet/dist/leaflet.css";
 
 // Verified District V Quezon City Barangay Halls: exact coordinates & addresses
-export const DISTRICT_V_HALLS = {
+const DISTRICT_V_HALLS = {
   "Bagbag": {
     coords: [14.6967, 121.0304],
     hallName: "Bagbag Barangay Hall",
@@ -91,219 +94,99 @@ export const DISTRICT_V_HALLS = {
   },
 };
 
-const TIER_COLORS = {
-  Low: {
-    fill: "#EF4444",
-    ring: "#FCA5A5",
-    badge: "bg-rose-50 text-rose-700 border-rose-200",
-    label: "Level 1 · Low-Income",
-  },
-  Middle: {
-    fill: "#F59E0B",
-    ring: "#FDE68A",
-    badge: "bg-amber-50 text-amber-700 border-amber-200",
-    label: "Level 2 · Middle-Income",
-  },
-  High: {
-    fill: "#10B981",
-    ring: "#6EE7B7",
-    badge: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    label: "Level 3 · High-Income",
-  },
-};
+const DISTRICT_V_CENTER = [14.7225, 121.048];
 
-const DISTRICT_V_CENTER = [14.7225, 121.0480];
-
-function FlyTo({ coords }) {
+function FitTo({ feature, coords }) {
   const map = useMap();
   useEffect(() => {
-    if (coords) {
-      map.flyTo(coords, 16, { duration: 1.2 });
-    } else {
-      map.flyTo(DISTRICT_V_CENTER, 13, { duration: 1.0 });
-    }
-  }, [coords, map]);
+    if (feature) map.flyToBounds(L.geoJSON(feature).getBounds(), { padding: [24, 24], duration: 0.8 });
+    else if (coords) map.flyTo(coords, 15, { duration: 0.8 });
+    else map.flyTo(DISTRICT_V_CENTER, 13, { duration: 0.8 });
+  }, [feature, coords, map]);
   return null;
 }
 
 export default function GeoMap({ barangay, tier }) {
-  const hallInfo = DISTRICT_V_HALLS[barangay] || null;
-  const coords = hallInfo ? hallInfo.coords : null;
-  const tierMeta = TIER_COLORS[tier] || TIER_COLORS["Middle"];
-  const [mapLayer, setMapLayer] = useState("osm"); // osm or carto
-
-  const tileUrl =
-    mapLayer === "carto"
-      ? "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-      : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+  const hall = DISTRICT_V_HALLS[barangay] || null;
+  const level = tier ? levelOf(tier) : null;
+  const feature = districtGeo.features.find((f) => f.properties.barangay === barangay) || null;
 
   return (
-    <div className="neu-surface rounded-3xl overflow-hidden border border-white/80">
-      {/* ── Modern Neumorphic Map Header ── */}
-      <div className="px-5 py-4 flex items-center justify-between border-b border-slate-200/60 bg-[#EEF2F6]">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl neu-inset-sm flex items-center justify-center text-indigo-600">
+    <div className="neu-surface rounded-3xl overflow-hidden">
+      {/* Header */}
+      <div className="px-5 py-3.5 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-xl neu-inset-sm flex items-center justify-center text-slate-600 shrink-0">
             <Landmark className="w-4 h-4" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-xs font-bold text-slate-900 tracking-tight">
-                Barangay Hall Location
-              </h3>
-            </div>
-            <p className="text-[10.5px] text-slate-500 font-medium mt-0.5">
-              {hallInfo
-                ? `${hallInfo.hallName} · District V, Quezon City`
-                : "Select a District V barangay to pin its official hall"}
-            </p>
-          </div>
+          <p className="text-[13px] font-semibold text-slate-800 truncate">
+            {barangay ? `Barangay ${barangay}` : "District V"}
+          </p>
         </div>
-
-        {/* Right Controls: Tier Badge */}
-        <div className="flex items-center gap-2">
-          {coords && (
-            <span
-              className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${tierMeta.badge}`}
-            >
-              {tierMeta.label}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* ── Map Container ── */}
-      <div style={{ height: 300 }} className="relative bg-slate-100">
-        <MapContainer
-          center={coords || DISTRICT_V_CENTER}
-          zoom={coords ? 16 : 13}
-          style={{ height: "100%", width: "100%" }}
-          zoomControl={true}
-          scrollWheelZoom={false}
-          attributionControl={false}
-        >
-          <TileLayer url={tileUrl} />
-
-          <FlyTo coords={coords} />
-
-          {coords ? (
-            <>
-              {/* Outer soft radar pulse ring */}
-              <CircleMarker
-                center={coords}
-                radius={24}
-                pathOptions={{
-                  fillColor: tierMeta.fill,
-                  color: tierMeta.fill,
-                  weight: 1.5,
-                  fillOpacity: 0.15,
-                  opacity: 0.5,
-                }}
-              />
-
-              {/* Inner crisp pinpoint marker */}
-              <CircleMarker
-                center={coords}
-                radius={10}
-                pathOptions={{
-                  fillColor: tierMeta.fill,
-                  color: "#ffffff",
-                  weight: 2.5,
-                  fillOpacity: 1,
-                  opacity: 1,
-                }}
-              >
-                <Popup>
-                  <div className="p-1 space-y-1.5" style={{ minWidth: 170 }}>
-                    <div className="flex items-center gap-1.5 text-indigo-700 font-bold text-xs border-b pb-1 border-slate-200">
-                      <Landmark className="w-3.5 h-3.5" />
-                      <span>{hallInfo.hallName}</span>
-                    </div>
-                    <div className="text-[11px] text-slate-700 leading-tight">
-                      {hallInfo.address}
-                    </div>
-                    <div className="text-[9.5px] font-mono text-slate-400">
-                      Zip: {hallInfo.zip} · District V, QC
-                    </div>
-                    <div
-                      className="text-[10px] font-bold inline-block px-1.5 py-0.5 rounded border mt-1"
-                      style={{
-                        color: tierMeta.fill,
-                        backgroundColor: tierMeta.ring + "44",
-                        borderColor: tierMeta.ring,
-                      }}
-                    >
-                      {tierMeta.label}
-                    </div>
-                  </div>
-                </Popup>
-              </CircleMarker>
-            </>
-          ) : (
-            /* Fallback center marker */
-            <CircleMarker
-              center={DISTRICT_V_CENTER}
-              radius={12}
-              pathOptions={{
-                fillColor: "#6366F1",
-                color: "#FFFFFF",
-                weight: 2,
-                fillOpacity: 0.8,
-              }}
-            >
-              <Popup>
-                <div className="text-xs font-bold text-slate-800">
-                  Quezon City District V
-                </div>
-              </Popup>
-            </CircleMarker>
-          )}
-        </MapContainer>
-
-        {/* Floating Quick Address Banner */}
-        {hallInfo && (
-          <div className="absolute bottom-3 left-3 right-3 z-[400] neu-surface-sm p-3 rounded-2xl border border-white/90 shadow-md backdrop-blur-md flex items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-6 h-6 rounded-lg neu-inset-sm flex items-center justify-center text-indigo-600 flex-shrink-0">
-                <MapPin className="w-3.5 h-3.5" />
-              </div>
-              <div className="truncate">
-                <p className="font-bold text-slate-900 truncate text-[11.5px]">
-                  {hallInfo.hallName}
-                </p>
-                <p className="text-[10px] text-slate-500 font-normal truncate">
-                  {hallInfo.address}
-                </p>
-              </div>
-            </div>
-
-            <a
-              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                `${hallInfo.hallName}, Quezon City`
-              )}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 px-2.5 py-1 rounded-xl neu-btn text-[10px] font-bold text-indigo-700 flex-shrink-0 hover:text-indigo-900 cursor-pointer"
-            >
-              <span>View Map</span>
-              <Navigation className="w-2.5 h-2.5" />
-            </a>
-          </div>
+        {level && (
+          <span className={`text-[10.5px] font-semibold px-2.5 py-1 rounded-full border shrink-0 ${level.badge}`}>
+            {level.short} · {level.name}
+          </span>
         )}
       </div>
 
-      {/* ── Footer ── */}
-      <div className="px-5 py-2.5 border-t border-slate-200/60 bg-[#EEF2F6] flex items-center justify-between">
-        <span className="text-[9.5px] font-mono text-slate-400">
-          Quezon City District V GIS Registry
-        </span>
-        <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-600">
-          <span
-            className="w-2 h-2 rounded-full inline-block"
-            style={{ backgroundColor: coords ? tierMeta.fill : "#94A3B8" }}
+      {/* Map */}
+      <div className="h-[240px] mx-3 rounded-2xl overflow-hidden bg-slate-100">
+        <MapContainer
+          center={hall?.coords || DISTRICT_V_CENTER}
+          zoom={14}
+          style={{ height: "100%", width: "100%" }}
+          scrollWheelZoom={false}
+          attributionControl={true}
+        >
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            className="dv-basemap"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           />
-          <span>{barangay ? `Barangay ${barangay}` : "District V"}</span>
-        </div>
+          {feature && (
+            <GeoJSON
+              key={barangay}
+              data={feature}
+              style={{
+                fillColor: level?.fill || "#94a3b8",
+                fillOpacity: 0.35,
+                color: level?.fill || "#64748b",
+                weight: 2,
+              }}
+            />
+          )}
+          {hall && (
+            <CircleMarker
+              center={hall.coords}
+              radius={7}
+              pathOptions={{ fillColor: level?.fill || "#475569", fillOpacity: 1, color: "#ffffff", weight: 2.5 }}
+            />
+          )}
+          <FitTo feature={feature} coords={hall?.coords} />
+        </MapContainer>
       </div>
+
+      {/* Hall address */}
+      {hall ? (
+        <div className="px-5 py-3.5 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11.5px] font-semibold text-slate-800 truncate">{hall.hallName}</p>
+            <p className="text-[10.5px] text-slate-500 truncate">{hall.address}</p>
+          </div>
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${hall.hallName}, Quezon City`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl neu-btn text-[11px] font-semibold text-slate-700 shrink-0"
+          >
+            <Navigation className="w-3 h-3" />
+            Directions
+          </a>
+        </div>
+      ) : (
+        <p className="px-5 py-3.5 text-[11px] text-slate-500">Pick a District V barangay to see its location.</p>
+      )}
     </div>
   );
 }

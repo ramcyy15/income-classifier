@@ -3,6 +3,22 @@
 
 @import "tailwindcss";
 
+/* Map Tailwind's indigo to the app's blue theme (levels: #104281 / #2a78d6 / #6da7ec),
+   so every indigo-* class matches the rest of the UI. */
+@theme {
+  --color-indigo-50: #eef4fc;
+  --color-indigo-100: #dbe7f6;
+  --color-indigo-200: #b9d2f1;
+  --color-indigo-300: #92bcee;
+  --color-indigo-400: #6da7ec;
+  --color-indigo-500: #2a78d6;
+  --color-indigo-600: #1a5fb4;
+  --color-indigo-700: #104281;
+  --color-indigo-800: #0d366b;
+  --color-indigo-900: #0a2a54;
+  --color-indigo-950: #071d3b;
+}
+
 /* ── Custom Easing (Emil Kowalski & Apple Designing Fluid Interfaces WWDC) ── */
 @layer base {
   :root {
@@ -85,14 +101,14 @@
 
   /* Primary Accent Neumorphic Button (Vibrant Indigo with ambient specular depth) */
   .neu-btn-primary {
-    background: linear-gradient(135deg, #6366F1, #4F46E5);
-    box-shadow: -3px -3px 8px #FFFFFF, 4px 6px 16px rgba(79, 70, 229, 0.36);
+    background: linear-gradient(135deg, #2a78d6, #104281);
+    box-shadow: -3px -3px 8px #FFFFFF, 4px 6px 16px rgba(16, 66, 129, 0.36);
     border-top: 1px solid rgba(255, 255, 255, 0.35);
     transition: transform 80ms var(--ease-out), box-shadow 80ms var(--ease-out);
     cursor: pointer;
   }
   .neu-btn-primary:hover:not(:disabled) {
-    box-shadow: -4px -4px 10px #FFFFFF, 5px 8px 20px rgba(79, 70, 229, 0.45);
+    box-shadow: -4px -4px 10px #FFFFFF, 5px 8px 20px rgba(16, 66, 129, 0.45);
   }
   .neu-btn-primary:active:not(:disabled) {
     transform: scale(0.97);
@@ -170,4 +186,23 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* District map: level number printed inside each barangay polygon (secondary encoding) */
+.leaflet-tooltip.dv-label {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+  font: 700 12px/1 'Inter', system-ui, sans-serif;
+  pointer-events: none;
+}
+.leaflet-tooltip.dv-label::before {
+  display: none;
+}
+
+/* District map basemap: quiet grayscale context so the level fills carry the color */
+.dv-basemap {
+  filter: grayscale(1) contrast(0.85) brightness(1.08);
+  opacity: 0.55;
 }

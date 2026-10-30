@@ -1,40 +1,36 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ScanSearch, History, CheckCircle2 } from "lucide-react";
+import { X, ScanSearch, History, CheckCircle2, Map as MapIcon } from "lucide-react";
 
 const PAGE_INFO = {
   classifier: {
     Icon: ScanSearch,
-    title: "Classification Center",
-    tagline: "Stacking Ensemble Income Tier Inference",
+    title: "Check",
+    tagline: "Find a barangay's income level",
     bullets: [
-      {
-        heading: "Barangay Classifier (Community Scale)",
-        body: "Analyzes 10 key PSA indicators (economic, utilities, human capital) to assign a community to Level 1 (Low), Level 2 (Middle), or Level 3 (High).",
-      },
-      {
-        heading: "Model Explainability & Decision Drivers",
-        body: "Visualizes the model's softmax probability distribution alongside localized feature importances indicating the primary drivers of welfare classification.",
-      },
+      { heading: "Enter the details", body: "Fill in 10 facts about the barangay, or upload a file for many barangays." },
+      { heading: "See the level", body: "Level 1 needs the most help. Level 3 is doing well." },
+      { heading: "See why", body: "Bars show which facts raised or lowered the result." },
+    ],
+  },
+  district: {
+    Icon: MapIcon,
+    title: "District Map",
+    tagline: "All 14 barangays at a glance",
+    bullets: [
+      { heading: "Map", body: "Darker blue means more need. The number inside is the level." },
+      { heading: "Who needs help first", body: "Barangays are listed from most to least in need." },
+      { heading: "Details", body: "Tap a barangay to see what affected its result." },
     ],
   },
   history: {
     Icon: History,
-    title: "Classification Audit Trail & Ledger",
-    tagline: "Forensic Audit Log & Dual Comparative Analysis",
+    title: "Saved Results",
+    tagline: "Every barangay you checked",
     bullets: [
-      {
-        heading: "Immutable Forensic Ledger",
-        body: "Chronologically logs each inference with ordinal numbering, microsecond timestamps, predicted tiers, and dominant socio-economic drivers.",
-      },
-      {
-        heading: "Side-by-Side Dual Analysis",
-        body: "Select any two classification profiles to trigger the side-by-side modal with delta matrices, radar charts, and policy intervention mappings.",
-      },
-      {
-        heading: "Analytical CSV Export",
-        body: "Export all session records into a standard spreadsheet format for statistical verification and reporting.",
-      },
+      { heading: "Review", body: "See past results and suggested programs." },
+      { heading: "Compare", body: "Pick two barangays to see them side by side." },
+      { heading: "Download", body: "Save all results as a spreadsheet." },
     ],
   },
 };
@@ -98,7 +94,7 @@ export default function NavInfoModal({ pageId, onClose }) {
               onClick={onClose}
               className="w-full py-2.5 neu-btn text-slate-900 font-semibold text-xs rounded-xl cursor-pointer"
             >
-              Understand & Continue
+              Got it
             </button>
           </div>
         </motion.div>

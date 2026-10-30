@@ -29,7 +29,7 @@ const FEATURE_ICON_MAP = {
   "Out-of-School Children": AlertCircle,
 };
 
-export default function FeatureDrivers({ featureImpacts = [], subtitle = "Model feature importances contextualized by baseline deviations" }) {
+export default function FeatureDrivers({ featureImpacts = [], subtitle = "" }) {
   if (!featureImpacts || featureImpacts.length === 0) return null;
 
   return (
@@ -37,15 +37,12 @@ export default function FeatureDrivers({ featureImpacts = [], subtitle = "Model 
       <div className="flex items-center justify-between">
         <div>
           <p className="text-[13px] font-semibold tracking-[-0.01em] text-slate-800">
-            Key Decision Drivers
+            Main reasons
           </p>
           <p className="text-[10px] text-slate-400 font-medium">
             {subtitle}
           </p>
         </div>
-        <span className="text-[9px] font-mono font-medium px-2 py-0.5 rounded-full neu-surface-sm text-indigo-700 uppercase tracking-wider">
-          Ensemble SHAP / Imp
-        </span>
       </div>
 
       <div className="space-y-2.5 pt-1">

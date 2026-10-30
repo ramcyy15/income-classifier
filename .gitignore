@@ -3,3 +3,6 @@
 .env.local
 .env.*.local
 ..claude
+# Python bytecode
+__pycache__/
+*.pyc

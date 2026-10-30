@@ -14,7 +14,7 @@ const SECTOR_COLORS = {
 export default function AISuggestions({
   interpretation,
   recommendations = [],
-  subtitle = "Evidence-based recommendations derived from socio-economic indicators",
+  subtitle = "",
   isFallback = false,
   aiProvider = "none",
   aiNote = "",
@@ -39,16 +39,14 @@ export default function AISuggestions({
           </div>
           <div>
             <p className="text-[13px] font-semibold tracking-[-0.01em] text-slate-800 flex items-center gap-1.5">
-              <span>KalingaBot Policy Recommendations</span>
+              <span>Suggested Programs</span>
               {aiProvider === "gemini" && (
                 <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 border border-indigo-200 uppercase tracking-wide">
-                  Gemini AI Live
+                  AI
                 </span>
               )}
             </p>
-            <p className="text-[10px] text-slate-400 font-medium">
-              {subtitle}
-            </p>
+            {subtitle && <p className="text-[10px] text-slate-400 font-medium">{subtitle}</p>}
           </div>
         </div>
       </div>
@@ -58,10 +56,10 @@ export default function AISuggestions({
         <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-300/80 text-amber-900 space-y-1">
           <div className="flex items-center gap-2 text-xs font-bold text-amber-800">
             <Cpu className="w-4 h-4 text-amber-600 flex-shrink-0" />
-            <span>Standard Policy Benchmarks (Offline Fallback Note)</span>
+            <span>Standard suggestions</span>
           </div>
           <p className="text-[11px] text-amber-700 leading-relaxed font-normal">
-            {aiNote || "The live Gemini AI recommendation service is offline or rate-limited. Standard verified DSWD and Quezon City LGU social welfare policy matrices are applied below as a safe fallback."}
+            The AI helper is unavailable, so standard DSWD and Quezon City programs are shown.
           </p>
         </div>
       )}
@@ -71,19 +69,11 @@ export default function AISuggestions({
         <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-300/80 text-rose-900 space-y-1">
           <div className="flex items-center gap-2 text-xs font-bold text-rose-800">
             <ShieldAlert className="w-4 h-4 text-rose-600 flex-shrink-0" />
-            <span>Recommendation Safeguards Active</span>
+            <span>Some numbers look unusual</span>
           </div>
           <p className="text-[11px] text-rose-700 leading-relaxed font-normal">
-            {aiNote || "Automated AI policy recommendations were withheld because one or more input indicators fell outside realistic operational bounds. Re-validate indicator inputs to generate tailored recommendations."}
+            Suggestions are hidden. Please double-check the numbers entered.
           </p>
-        </div>
-      )}
-
-      {/* Live Gemini Provider Note */}
-      {aiProvider === "gemini" && aiNote && (
-        <div className="p-2.5 rounded-xl bg-indigo-50/60 border border-indigo-200/60 text-[10.5px] text-indigo-800 flex items-center gap-2 font-medium">
-          <Sparkles className="w-3.5 h-3.5 text-indigo-600 flex-shrink-0" />
-          <span>{aiNote}</span>
         </div>
       )}
 
@@ -91,7 +81,7 @@ export default function AISuggestions({
       {interpretation && (
         <div className="neu-inset-sm rounded-2xl px-4.5 py-3.5 space-y-1 bg-white/40">
           <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold block">
-            Executive Synthesis
+            Summary
           </span>
           <p className="text-[11px] text-slate-700 leading-relaxed">
             {interpretation}

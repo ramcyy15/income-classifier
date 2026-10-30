@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ScanSearch, History, Info } from "lucide-react";
+import { ScanSearch, History, Info, Map as MapIcon } from "lucide-react";
 import NavInfoModal from "./NavInfoModal";
 import logo from "../assets/logo.png";
 
 const navItems = [
-  { id: "classifier", label: "Classify", icon: ScanSearch },
-  { id: "history", label: "History & Compare", icon: History },
+  { id: "classifier", label: "Check", icon: ScanSearch },
+  { id: "district", label: "District Map", icon: MapIcon },
+  { id: "history", label: "Saved Results", icon: History },
 ];
 
 // Emil: spring config for layout morph
@@ -22,12 +23,12 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           {/* Logo emblem */}
           <button
             onClick={() => setActiveTab("classifier")}
-            title="District V Income Intelligence"
+            title="Home"
             className="w-12 h-12 rounded-2xl neu-btn flex items-center justify-center cursor-pointer"
           >
             <img
               src={logo}
-              alt="District V Income Intelligence"
+              alt="District V logo"
               className="w-9 h-9 object-contain"
             />
           </button>

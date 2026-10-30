@@ -1,107 +1,53 @@
 import React from "react";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from "recharts";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell, LabelList } from "recharts";
+import { LEVELS, LEVEL_ORDER, levelOf } from "../constants/levels";
 
-const PSA_TIER_META = {
-  Low: {
-    level: "Level 1",
-    label: "Low-Income Tier",
-    subLabel: "Survival",
-    color: "#EF4444",
-    bg: "bg-red-500/10",
-    border: "border-red-300/80",
-    text: "text-red-700",
-  },
-  Middle: {
-    level: "Level 2",
-    label: "Middle-Income Tier",
-    subLabel: "Subsistence",
-    color: "#F59E0B",
-    bg: "bg-amber-500/10",
-    border: "border-amber-300/80",
-    text: "text-amber-700",
-  },
-  High: {
-    level: "Level 3",
-    label: "High-Income Tier",
-    subLabel: "Self-Sufficient",
-    color: "#10B981",
-    bg: "bg-emerald-500/10",
-    border: "border-emerald-300/80",
-    text: "text-emerald-700",
-  },
-};
+export default function PredictionCard({ predictedClass, confidence, probabilities = {}, targetName = "Barangay" }) {
+  const meta = levelOf(predictedClass);
 
-export default function PredictionCard({
-  predictedClass,
-  confidence,
-  probabilities = {},
-  targetName = "Target Subject",
-  isIndividual = false,
-}) {
-  const meta = PSA_TIER_META[predictedClass] || PSA_TIER_META.Middle;
-  const labelText = isIndividual ? meta.subLabel : meta.label;
-
-  const chartData = Object.entries(probabilities).map(([cls, prob]) => ({
-    name: PSA_TIER_META[cls]?.level || cls,
-    label: isIndividual ? PSA_TIER_META[cls]?.subLabel : PSA_TIER_META[cls]?.label,
-    percentage: Number((prob * 100).toFixed(1)),
-    isWinner: cls === predictedClass,
+  const chartData = LEVEL_ORDER.filter((cls) => probabilities[cls] != null).map((cls) => ({
+    cls,
+    name: LEVELS[cls].short,
+    label: LEVELS[cls].name,
+    percentage: Number((probabilities[cls] * 100).toFixed(1)),
   }));
 
   return (
     <div className="neu-surface rounded-3xl p-6 space-y-4">
-      {/* Header Info */}
-      <div className="flex items-start justify-between">
+      {/* Result */}
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-slate-400">
-              {isIndividual ? "SWDI CLASSIFICATION" : "OFFICIAL INCOME TIER"}
-            </span>
-            <span
-              className={`text-[10px] font-semibold uppercase tracking-[0.08em] px-2.5 py-0.5 rounded-full border ${meta.bg} ${meta.border} ${meta.text}`}
-            >
-              {labelText}
+          <p className="text-[11px] font-medium text-slate-500 mb-1">{targetName}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900">{meta.short}</h2>
+            <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${meta.badge}`}>
+              {meta.name}
             </span>
           </div>
-
-          <h2 className="text-3xl font-bold tracking-tight text-slate-900">
-            {meta.level}
-          </h2>
-          <p className="text-xs font-medium text-slate-500 mt-0.5">
-            {targetName}
-          </p>
+          <p className={`text-xs font-semibold mt-1 ${meta.text}`}>{meta.meaning}</p>
         </div>
 
-        {/* Model Confidence Box with Debossed Inset */}
         <div className="text-right neu-inset-sm px-4 py-2.5 rounded-2xl">
-          <span className="text-2xl font-bold font-mono tabular-nums text-indigo-600 leading-none">
-            {(confidence * 100).toFixed(1)}%
-          </span>
-          <p className="text-[10px] font-medium text-slate-400 mt-1 font-mono">Model Confidence</p>
+          <span className="text-2xl font-bold text-slate-900 leading-none">{(confidence * 100).toFixed(0)}%</span>
+          <p className="text-[10px] font-medium text-slate-500 mt-1">Sure</p>
         </div>
       </div>
 
-      {/* Probability Distribution Chart */}
-      <div className="pt-2 border-t border-slate-200/60">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-[11px] font-semibold text-slate-700">Tier Probability Distribution</p>
-          <span className="text-[10px] font-mono text-slate-400">Stacking Ensemble Softmax</span>
-        </div>
-
+      {/* Chance of each level */}
+      <div className="pt-3 border-t border-slate-200/60">
+        <p className="text-[11px] font-semibold text-slate-700 mb-2">Chance of each level</p>
         <div className="h-36 w-full pt-1">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              margin={{ top: 12, right: 10, left: -20, bottom: 0 }}
-            >
+            <BarChart data={chartData} margin={{ top: 16, right: 10, left: -20, bottom: 0 }}>
               <XAxis
                 dataKey="name"
-                tick={{ fontSize: 11, fontWeight: 500, fill: "#64748b" }}
+                tick={{ fontSize: 11, fontWeight: 500, fill: "#475569" }}
                 axisLine={{ stroke: "#cbd5e1" }}
                 tickLine={false}
               />
               <YAxis
                 domain={[0, 100]}
+                ticks={[0, 50, 100]}
                 tick={{ fontSize: 10, fill: "#94a3b8" }}
                 axisLine={false}
                 tickLine={false}
@@ -109,49 +55,30 @@ export default function PredictionCard({
               />
               <Tooltip
                 cursor={{ fill: "rgba(226, 232, 240, 0.4)" }}
-                content={({ active, payload }) => {
-                  if (active && payload && payload.length) {
-                    const d = payload[0].payload;
-                    return (
-                      <div className="bg-slate-900 text-white text-[11px] px-3 py-2 rounded-xl shadow-xl space-y-0.5">
-                        <p className="font-semibold text-slate-200">
-                          {d.name} · {d.label}
-                        </p>
-                        <p className="text-indigo-300 font-bold font-mono text-xs">
-                          {d.percentage}% probability
-                        </p>
-                      </div>
-                    );
-                  }
-                  return null;
-                }}
+                content={({ active, payload }) =>
+                  active && payload?.length ? (
+                    <div className="bg-slate-900 text-white text-[11px] px-3 py-2 rounded-xl shadow-xl">
+                      <p className="font-bold text-xs">{payload[0].payload.percentage}%</p>
+                      <p className="text-slate-300">
+                        {payload[0].payload.name} · {payload[0].payload.label}
+                      </p>
+                    </div>
+                  ) : null
+                }
               />
-              <Bar
-                dataKey="percentage"
-                radius={[6, 6, 0, 0]}
-                maxBarSize={48}
-                animationDuration={800}
-              >
+              <Bar dataKey="percentage" radius={[4, 4, 0, 0]} maxBarSize={24} animationDuration={800}>
                 {chartData.map((entry) => (
-                  <Cell
-                    key={entry.name}
-                    fill={entry.isWinner ? "#4f46e5" : "#94a3b8"}
-                  />
+                  <Cell key={entry.cls} fill={LEVELS[entry.cls].fill} />
                 ))}
+                <LabelList
+                  dataKey="percentage"
+                  position="top"
+                  formatter={(v) => `${v}%`}
+                  style={{ fontSize: 10, fontWeight: 600, fill: "#334155" }}
+                />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-        </div>
-
-        <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium px-1 pt-2">
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm bg-indigo-600 inline-block shadow-xs" />
-            Classified Tier (Highest Probability)
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm bg-slate-400 inline-block" />
-            Alternative Classes
-          </span>
         </div>
       </div>
     </div>

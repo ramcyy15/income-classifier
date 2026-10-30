@@ -11,27 +11,11 @@ import {
   TrendingUp,
   Minus,
 } from "lucide-react";
+import { LEVELS } from "../constants/levels";
 
-const TIER_META = {
-  Low: {
-    level: "Level 1",
-    label: "Survival",
-    badge: "bg-rose-50 text-rose-700 border-rose-200",
-    bar: "bg-rose-500",
-  },
-  Middle: {
-    level: "Level 2",
-    label: "Subsistence",
-    badge: "bg-amber-50 text-amber-700 border-amber-200",
-    bar: "bg-amber-500",
-  },
-  High: {
-    level: "Level 3",
-    label: "Self-Sufficient",
-    badge: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    bar: "bg-emerald-500",
-  },
-};
+const TIER_META = Object.fromEntries(
+  Object.entries(LEVELS).map(([cls, l]) => [cls, { level: l.short, label: l.need, badge: l.badge }])
+);
 
 export default function ComparisonModal({ isOpen, onClose, itemA, itemB }) {
   const [showAll, setShowAll] = useState(false);
@@ -152,11 +136,8 @@ export default function ComparisonModal({ isOpen, onClose, itemA, itemB }) {
             <div>
               <div className="flex items-center gap-2.5">
                 <h2 className="text-sm font-bold tracking-tight text-slate-900">
-                  Barangay Comparison
+                  Compare
                 </h2>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200/80">
-                  Side-by-Side Analysis
-                </span>
               </div>
               <p className="text-[11px] text-slate-400 mt-0.5">
                 {labelA} vs {labelB}
@@ -175,10 +156,10 @@ export default function ComparisonModal({ isOpen, onClose, itemA, itemB }) {
             {isTypeMismatch ? (
               <div className="neu-surface rounded-2xl p-6 text-center space-y-3">
                 <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto" />
-                <h3 className="text-sm font-bold text-slate-800">Type Mismatch</h3>
-                <p className="text-xs text-slate-500">Select two barangay records to compare.</p>
+                <h3 className="text-sm font-bold text-slate-800">Can't compare</h3>
+                <p className="text-xs text-slate-500">Pick two barangays.</p>
                 <button onClick={onClose} className="px-4 py-2 neu-btn rounded-xl text-xs font-semibold text-slate-700 cursor-pointer">
-                  Return to Audit Trail
+                  Back
                 </button>
               </div>
             ) : (
@@ -193,16 +174,15 @@ export default function ComparisonModal({ isOpen, onClose, itemA, itemB }) {
                         {label}
                       </span>
                       <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-bold border ${tier.badge} mb-2`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${tier.bar}`} />
                         {tier.level} · {tier.label}
                       </div>
                       <div className="flex gap-3 pt-2 border-t border-slate-200/60">
                         <div className="neu-inset-sm p-2 rounded-xl flex-1 text-center">
-                          <span className="text-[9px] font-mono uppercase text-slate-400 block">Confidence</span>
+                          <span className="text-[9px] uppercase text-slate-400 block">Sure</span>
                           <span className={`text-sm font-bold font-mono ${conf}`}>{item.confidence ?? 0}%</span>
                         </div>
                         <div className="neu-inset-sm p-2 rounded-xl flex-1 text-center">
-                          <span className="text-[9px] font-mono uppercase text-slate-400 block">Top Driver</span>
+                          <span className="text-[9px] uppercase text-slate-400 block">Main reason</span>
                           <span className="text-[10px] font-semibold text-slate-700 truncate block mt-0.5" title={item.top_feature}>
                             {item.top_feature?.split(" ")[0] || "—"}
                           </span>
@@ -216,9 +196,9 @@ export default function ComparisonModal({ isOpen, onClose, itemA, itemB }) {
                 <div className="neu-inset-sm rounded-2xl px-4 py-3 flex items-center gap-3">
                   <Sparkles className="w-4 h-4 text-indigo-600 flex-shrink-0" />
                   <p className="text-xs font-medium text-slate-700">
-                    <strong>Verdict: </strong>{summarySentence}
+                    {summarySentence}
                     {biggestDiff && (
-                      <> Widest gap: <strong>{biggestDiff.key}</strong> ({String(biggestDiff.valA)} vs {String(biggestDiff.valB)}).</>
+                      <> Biggest difference: <strong>{biggestDiff.key}</strong> ({String(biggestDiff.valA)} vs {String(biggestDiff.valB)}).</>
                     )}
                   </p>
                 </div>
@@ -231,10 +211,10 @@ export default function ComparisonModal({ isOpen, onClose, itemA, itemB }) {
                       <BarChart3 className="w-4 h-4 text-indigo-600" />
                       <div>
                         <span className="text-xs font-bold text-slate-800 uppercase tracking-wider block">
-                          Indicator Progress Graph
+                          Compare one fact
                         </span>
                         <span className="text-[10px] text-slate-400">
-                          Select an indicator to analyze relative divergence and status
+                          Pick a fact from the list
                         </span>
                       </div>
                     </div>
@@ -263,7 +243,7 @@ export default function ComparisonModal({ isOpen, onClose, itemA, itemB }) {
                     <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-200/60">
                       <div>
                         <span className="text-[10px] font-mono uppercase text-slate-400 font-bold block">
-                          Selected Indicator
+                          Fact
                         </span>
                         <h4 className="text-xs font-bold text-slate-900 mt-0.5">
                           {activeMetric.key}
@@ -345,7 +325,7 @@ export default function ComparisonModal({ isOpen, onClose, itemA, itemB }) {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <BarChart3 className="w-3.5 h-3.5 text-indigo-600" />
-                      <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">All Indicators Summary</span>
+                      <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">All facts</span>
                     </div>
                     <div className="flex items-center gap-4 text-[11px] font-semibold">
                       <span className="flex items-center gap-1.5 text-indigo-700">
@@ -418,7 +398,7 @@ export default function ComparisonModal({ isOpen, onClose, itemA, itemB }) {
                   <div className="neu-surface rounded-2xl p-5 space-y-3">
                     <div className="flex items-center gap-2">
                       <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                      <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">KalingaBot AI Insights</span>
+                      <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">Suggestions</span>
                     </div>
                     {[
                       { label: labelA, text: itemA.ai_interpretation, recs: itemA.ai_recommendations || [] },
@@ -446,7 +426,7 @@ export default function ComparisonModal({ isOpen, onClose, itemA, itemB }) {
 
           {/* Footer */}
           <div className="px-6 py-3.5 border-t border-slate-200/80 bg-[#EEF2F6] flex items-center justify-between">
-            <span className="text-[11px] font-mono text-slate-400">District V Income Classifier</span>
+            <span className="text-[11px] text-slate-400">District V</span>
             <button
               onClick={onClose}
               className="px-5 py-2 neu-btn text-slate-800 text-xs font-semibold rounded-xl active:scale-95 cursor-pointer"

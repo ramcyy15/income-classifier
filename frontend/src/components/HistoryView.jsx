@@ -23,33 +23,15 @@ import {
 } from "../utils/historyStore";
 import ComparisonModal from "./ComparisonModal";
 import ConfirmModal from "./ConfirmModal";
+import { LEVELS, LEVEL_ORDER } from "../constants/levels";
+import Illustration from "./Illustration";
 
-const TIER_META = {
-  Low: {
-    level: "Level 1",
-    label: "Survival",
-    definition: "Critical basic needs deficits; urgent social safety net required",
-    dot: "bg-red-500",
-    text: "text-red-700",
-    badge: "bg-red-50 text-red-700 border-red-200",
-  },
-  Middle: {
-    level: "Level 2",
-    label: "Subsistence",
-    definition: "Meets basic nutrition; vulnerable to external economic shocks",
-    dot: "bg-amber-500",
-    text: "text-amber-700",
-    badge: "bg-amber-50 text-amber-700 border-amber-200",
-  },
-  High: {
-    level: "Level 3",
-    label: "Self-Sufficient",
-    definition: "Economically resilient; focus on enterprise capital & growth",
-    dot: "bg-emerald-500",
-    text: "text-emerald-700",
-    badge: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  },
-};
+const TIER_META = Object.fromEntries(
+  Object.entries(LEVELS).map(([cls, l]) => [
+    cls,
+    { level: l.short, label: l.need, definition: l.description, dot: l.dot, text: l.text, badge: l.badge },
+  ])
+);
 
 const formatTimestamp = (isoString) => {
   if (!isoString) return "—";
@@ -130,11 +112,11 @@ export default function HistoryView({ onNavigateToClassifier }) {
     if (deleteModal.type === "single" && deleteModal.record) {
       deleteClassificationRecord(deleteModal.record.id);
       setSelectedIds((prev) => prev.filter((id) => id !== deleteModal.record.id));
-      showToast(`Audit record for Barangay ${deleteModal.record.target || "Community"} deleted.`);
+      showToast("Deleted.");
     } else if (deleteModal.type === "all") {
       clearClassificationHistory();
       setSelectedIds([]);
-      showToast("All recorded classification audit logs cleared.");
+      showToast("All results deleted.");
     }
     setDeleteModal({ isOpen: false, type: "single", record: null });
   };
@@ -164,16 +146,16 @@ export default function HistoryView({ onNavigateToClassifier }) {
     if (history.length === 0) return;
 
     const headers = [
-      "Record Ordinal",
-      "Timestamp (Formatted)",
-      "Timestamp (ISO)",
-      "Barangay Jurisdiction",
-      "Predicted Tier",
-      "Tier Plain Definition",
-      "Model Confidence (%)",
-      "Probability Low (%)",
-      "Probability Middle (%)",
-      "Probability High (%)",
+      "No.",
+      "Date",
+      "Date (ISO)",
+      "Barangay",
+      "Level",
+      "Meaning",
+      "Sure (%)",
+      "Chance of Level 1 (%)",
+      "Chance of Level 2 (%)",
+      "Chance of Level 3 (%)",
       "Average Monthly Income (PHP)",
       "Employed Household Heads (%)",
       "Informal Settlers (%)",
@@ -184,10 +166,10 @@ export default function HistoryView({ onNavigateToClassifier }) {
       "Youth Net School Enrollment (%)",
       "Secondary Education Completion (%)",
       "Average Family Size",
-      "Dominant Decision Driver",
-      "Policy Executive Summary",
-      "Recommended Programs",
-      "Recommendation Engine Source",
+      "Main reason",
+      "Summary",
+      "Suggested programs",
+      "Advice source",
     ];
 
     const rows = history.map((item, idx) => {
@@ -258,7 +240,7 @@ export default function HistoryView({ onNavigateToClassifier }) {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    showToast(`Full-profile archive downloaded (${history.length} records, 24 indicators).`);
+    showToast("Downloaded.");
   };
 
   const canLaunchCompare = selectedIds.length === 2;
@@ -273,9 +255,9 @@ export default function HistoryView({ onNavigateToClassifier }) {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="fixed top-6 right-8 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-slate-900 text-white text-xs font-semibold shadow-xl border border-slate-700/60"
+            className="fixed top-6 right-8 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-[#104281] text-white text-xs font-semibold shadow-[0_10px_30px_-12px_rgba(13,54,107,0.6)] border border-[#2a78d6]/40"
           >
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-[#6da7ec] flex-shrink-0" />
             <span>{toastMessage}</span>
           </motion.div>
         )}
@@ -289,11 +271,11 @@ export default function HistoryView({ onNavigateToClassifier }) {
               <History className="w-3.5 h-3.5" />
             </span>
             <h1 className="text-sm font-bold tracking-[-0.01em] text-slate-900 truncate">
-              Barangay Classification Audit Trail
+              Saved Results
             </h1>
           </div>
           <p className="text-[10px] text-slate-500 font-medium leading-relaxed">
-            Track barangay inferences, compare profiles, and export full-profile CSV archives.
+            Review, compare, or download past results.
           </p>
         </div>
 
@@ -302,11 +284,10 @@ export default function HistoryView({ onNavigateToClassifier }) {
           <button
             onClick={() => setShowTierGuide(!showTierGuide)}
             className="flex items-center gap-1 px-2.5 py-1.5 neu-btn text-indigo-600 text-xs font-semibold rounded-xl cursor-pointer whitespace-nowrap"
-            title="View plain-language definitions for SWDI income tiers"
+            title="What the levels mean"
           >
             <HelpCircle className="w-3.5 h-3.5 flex-shrink-0" />
-            <span className="hidden sm:inline">Tier Definitions</span>
-            <span className="sm:hidden">Tiers</span>
+            <span>Levels</span>
           </button>
 
           {history.length > 0 && (
@@ -314,18 +295,18 @@ export default function HistoryView({ onNavigateToClassifier }) {
               <button
                 onClick={handleExportCSV}
                 className="flex items-center gap-1 px-2.5 py-1.5 neu-btn text-slate-700 text-xs font-semibold rounded-xl cursor-pointer whitespace-nowrap"
-                title="Export complete 24-column dataset to CSV"
+                title="Download as spreadsheet"
               >
                 <Download className="w-3.5 h-3.5 text-indigo-600 flex-shrink-0" />
-                <span>Export CSV ({history.length})</span>
+                <span>Download</span>
               </button>
               <button
                 onClick={handleOpenClearAll}
                 className="flex items-center gap-1 px-2.5 py-1.5 neu-btn text-rose-600 hover:text-rose-700 text-xs font-semibold rounded-xl cursor-pointer whitespace-nowrap"
-                title="Clear all recorded history"
+                title="Delete all results"
               >
                 <Trash2 className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="hidden sm:inline">Clear All</span>
+                <span className="hidden sm:inline">Delete all</span>
               </button>
             </>
           )}
@@ -350,8 +331,7 @@ export default function HistoryView({ onNavigateToClassifier }) {
                     <ShieldCheck className="w-3.5 h-3.5" />
                   </span>
                   <div>
-                    <p className="text-xs font-bold text-slate-800 leading-none">SWDI Income Classification Tiers</p>
-                    <p className="text-[10px] text-slate-400 font-medium mt-0.5">Plain-language definitions for each income bracket</p>
+                    <p className="text-xs font-bold text-slate-800 leading-none">What the levels mean</p>
                   </div>
                 </div>
                 <button
@@ -362,81 +342,22 @@ export default function HistoryView({ onNavigateToClassifier }) {
                 </button>
               </div>
 
-              {/* Three Tier Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-
-                {/* Level 1 — Survival */}
-                <div className="neu-inset rounded-2xl p-4 space-y-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className="w-7 h-7 rounded-xl bg-rose-500/10 flex items-center justify-center flex-shrink-0">
-                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-                    </span>
-                    <div>
-                      <p className="text-[10px] font-mono font-semibold text-rose-600 uppercase tracking-widest leading-none">Level 1</p>
-                      <p className="text-xs font-bold text-slate-800 leading-tight">Survival</p>
+                {LEVEL_ORDER.map((cls) => {
+                  const l = LEVELS[cls];
+                  return (
+                    <div key={cls} className="neu-inset rounded-2xl p-4 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[10.5px] font-semibold px-2.5 py-0.5 rounded-full border ${l.badge}`}>
+                          {l.short}
+                        </span>
+                        <p className="text-xs font-bold text-slate-800">{l.need}</p>
+                      </div>
+                      <p className="text-[11px] text-slate-600 leading-relaxed">{l.description}</p>
+                      <p className="text-[10px] text-slate-500 font-medium">Helpful: {l.programs}</p>
                     </div>
-                    <span className="ml-auto text-[9px] px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-semibold border border-rose-200/60 whitespace-nowrap">
-                      Low-Income
-                    </span>
-                  </div>
-                  <div className="w-full h-px bg-slate-200/70" />
-                  <p className="text-[11px] text-slate-600 leading-relaxed">
-                    Household income falls below subsistence food threshold. Critical multi-dimensional deprivation requiring immediate conditional cash transfers (4Ps) and emergency assistance.
-                  </p>
-                  <div className="flex items-center gap-1.5 pt-0.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
-                    <span className="text-[10px] text-slate-500 font-medium">Priority: DSWD 4Ps, Emergency Aid</span>
-                  </div>
-                </div>
-
-                {/* Level 2 — Subsistence */}
-                <div className="neu-inset rounded-2xl p-4 space-y-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className="w-7 h-7 rounded-xl bg-amber-500/10 flex items-center justify-center flex-shrink-0">
-                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                    </span>
-                    <div>
-                      <p className="text-[10px] font-mono font-semibold text-amber-600 uppercase tracking-widest leading-none">Level 2</p>
-                      <p className="text-xs font-bold text-slate-800 leading-tight">Subsistence</p>
-                    </div>
-                    <span className="ml-auto text-[9px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold border border-amber-200/60 whitespace-nowrap">
-                      Middle-Income
-                    </span>
-                  </div>
-                  <div className="w-full h-px bg-slate-200/70" />
-                  <p className="text-[11px] text-slate-600 leading-relaxed">
-                    Meets primary nutritional requirements but remains vulnerable to price inflation, medical emergencies, and informal work. Primary intervention: sustainable livelihood and vocational training.
-                  </p>
-                  <div className="flex items-center gap-1.5 pt-0.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                    <span className="text-[10px] text-slate-500 font-medium">Priority: DOLE TUPAD, TESDA SLP</span>
-                  </div>
-                </div>
-
-                {/* Level 3 — Self-Sufficient */}
-                <div className="neu-inset rounded-2xl p-4 space-y-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className="w-7 h-7 rounded-xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                    </span>
-                    <div>
-                      <p className="text-[10px] font-mono font-semibold text-emerald-600 uppercase tracking-widest leading-none">Level 3</p>
-                      <p className="text-xs font-bold text-slate-800 leading-tight">Self-Sufficient</p>
-                    </div>
-                    <span className="ml-auto text-[9px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold border border-emerald-200/60 whitespace-nowrap">
-                      High-Income
-                    </span>
-                  </div>
-                  <div className="w-full h-px bg-slate-200/70" />
-                  <p className="text-[11px] text-slate-600 leading-relaxed">
-                    Financially independent and resilient with permanent housing tenure and strong school completion. Focused on MSME capital development and higher educational scholarships.
-                  </p>
-                  <div className="flex items-center gap-1.5 pt-0.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                    <span className="text-[10px] text-slate-500 font-medium">Priority: DTI MSME, CHED Scholarships</span>
-                  </div>
-                </div>
-
+                  );
+                })}
               </div>
             </div>
           </motion.div>
@@ -447,7 +368,7 @@ export default function HistoryView({ onNavigateToClassifier }) {
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
           <Building2 className="w-4 h-4 text-indigo-600" />
-          <span>Recorded Barangay Inferences ({history.length})</span>
+          <span>{history.length} saved</span>
         </div>
 
         {/* Selected comparison action badge */}
@@ -455,14 +376,14 @@ export default function HistoryView({ onNavigateToClassifier }) {
           <div className="text-right">
             <span className="text-xs font-medium text-slate-600 block">
               {selectedIds.length === 0 ? (
-                <span>Compare: Select 2 barangays to inspect dual metrics</span>
+                <span>Pick 2 to compare</span>
               ) : selectedIds.length === 1 ? (
                 <span>
-                  Select another <strong className="text-indigo-600">Barangay</strong>
+                  Pick 1 more
                 </span>
               ) : (
                 <span>
-                  Comparing 2 <strong className="text-emerald-700">Barangays</strong>
+                  2 picked
                 </span>
               )}
             </span>
@@ -489,7 +410,7 @@ export default function HistoryView({ onNavigateToClassifier }) {
           >
             <ArrowUpDown className="w-3.5 h-3.5" />
             <span>
-              {canLaunchCompare ? "Compare Barangays" : "Launch Comparison"}
+              Compare
             </span>
           </button>
         </div>
@@ -498,15 +419,13 @@ export default function HistoryView({ onNavigateToClassifier }) {
       {/* Main Records Table or Empty State */}
       {history.length === 0 ? (
         <div className="neu-surface rounded-3xl p-12 text-center flex flex-col items-center justify-center space-y-4">
-          <div className="w-14 h-14 rounded-2xl neu-inset flex items-center justify-center text-slate-400">
-            <Building2 className="w-7 h-7" />
-          </div>
+          <Illustration name="saved" className="w-48" />
           <div className="space-y-1">
             <h3 className="text-sm font-bold text-slate-800">
-              No Barangay Inferences Recorded
+              Nothing saved yet
             </h3>
             <p className="text-xs text-slate-500 max-w-sm">
-              Run a single community classification or upload a multi-barangay spreadsheet to automatically populate this forensic audit ledger.
+              Check a barangay and it will appear here.
             </p>
           </div>
           {onNavigateToClassifier && (
@@ -514,7 +433,7 @@ export default function HistoryView({ onNavigateToClassifier }) {
               onClick={onNavigateToClassifier}
               className="mt-2 flex items-center gap-2 px-4 py-2 neu-btn-primary text-white text-xs font-semibold rounded-xl cursor-pointer"
             >
-              <span>Go to Barangay Classifier</span>
+              <span>Check a barangay</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           )}
@@ -522,16 +441,16 @@ export default function HistoryView({ onNavigateToClassifier }) {
       ) : (
         <div className="neu-surface rounded-3xl overflow-hidden shadow-sm">
           {/* Table Column Headers */}
-          <div className="hidden md:grid grid-cols-12 gap-3 px-5 py-3 bg-slate-50/90 border-b border-slate-200/80 text-[10px] font-mono uppercase tracking-[0.12em] text-slate-400 font-semibold items-center">
+          <div className="hidden md:grid grid-cols-12 gap-3 px-5 py-3 bg-slate-50/90 border-b border-slate-200/80 text-[10.5px] text-slate-500 font-semibold items-center">
             <div className="col-span-1 flex items-center gap-2">
               <span>#</span>
             </div>
-            <div className="col-span-2">TIMESTAMP</div>
-            <div className="col-span-4">BARANGAY JURISDICTION</div>
-            <div className="col-span-2">PREDICTED TIER</div>
-            <div className="col-span-1 text-right">CONF</div>
-            <div className="col-span-1 text-right">DRIVER</div>
-            <div className="col-span-1 text-right">ACTIONS</div>
+            <div className="col-span-2">Date</div>
+            <div className="col-span-3">Barangay</div>
+            <div className="col-span-2">Level</div>
+            <div className="col-span-1 text-right">Sure</div>
+            <div className="col-span-2 text-right">Reason</div>
+            <div className="col-span-1 text-right"></div>
           </div>
 
           {/* Table Rows with Staggered Motion */}
@@ -579,7 +498,7 @@ export default function HistoryView({ onNavigateToClassifier }) {
                     </div>
 
                     {/* Target Barangay */}
-                    <div className="col-span-4 font-semibold text-slate-900 truncate flex items-center gap-2">
+                    <div className="col-span-3 font-semibold text-slate-900 truncate flex items-center gap-2">
                       <span className="truncate">{item.target || item.barangay}</span>
                       {item.ai_interpretation && (
                         <button
@@ -588,7 +507,7 @@ export default function HistoryView({ onNavigateToClassifier }) {
                             setExpandedAiId(expandedAiId === item.id ? null : item.id);
                           }}
                           className="flex-shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-600 hover:bg-indigo-100 transition-colors cursor-pointer"
-                          title="View KalingaBot policy summary"
+                          title="Show suggestions"
                         >
                           <Sparkles className="w-2.5 h-2.5" />
                           <span className="text-[9px] font-bold uppercase tracking-wide">AI</span>
@@ -614,8 +533,8 @@ export default function HistoryView({ onNavigateToClassifier }) {
                     </div>
 
                     {/* Top Driver */}
-                    <div className="col-span-1 text-right font-mono text-[11px] text-slate-500 truncate" title={item.top_feature || ""}>
-                      {item.top_feature ? item.top_feature.split(" ")[0] : "—"}
+                    <div className="col-span-2 text-right text-[10.5px] text-slate-500 truncate" title={item.top_feature || ""}>
+                      {item.top_feature || "—"}
                     </div>
 
                     {/* Row Delete Action */}
@@ -623,7 +542,7 @@ export default function HistoryView({ onNavigateToClassifier }) {
                       <button
                         onClick={(e) => handleOpenDeleteSingle(e, item)}
                         className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                        title="Delete this record"
+                        title="Delete"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -645,11 +564,11 @@ export default function HistoryView({ onNavigateToClassifier }) {
                           <div className="flex items-center justify-between text-[10px] font-bold text-indigo-700 uppercase tracking-wider">
                             <span className="flex items-center gap-1.5">
                               <Sparkles className="w-3 h-3 text-indigo-600" />
-                              KalingaBot Executive Policy Summary
+                              Summary
                             </span>
                             {item.is_fallback && (
                               <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-mono">
-                                Standard Fallback
+                                Standard advice
                               </span>
                             )}
                           </div>
@@ -659,7 +578,7 @@ export default function HistoryView({ onNavigateToClassifier }) {
                           {item.ai_recommendations?.length > 0 && (
                             <div className="space-y-1.5 pt-1">
                               <span className="text-[10px] font-mono font-semibold text-slate-500 block uppercase">
-                                Recommended Agency Interventions:
+                                Suggested programs:
                               </span>
                               <div className="flex flex-wrap gap-1.5">
                                 {item.ai_recommendations.map((rec, ri) => (
@@ -706,7 +625,7 @@ export default function HistoryView({ onNavigateToClassifier }) {
                           </span>
                         </div>
                         <div className="font-mono text-[10px] text-slate-500">
-                          {item.confidence ? `${item.confidence}% conf` : ""}
+                          {item.confidence ? `${item.confidence}% sure` : ""}
                         </div>
                       </div>
 
@@ -732,22 +651,22 @@ export default function HistoryView({ onNavigateToClassifier }) {
         onConfirm={handleConfirmDelete}
         title={
           deleteModal.type === "all"
-            ? "Clear All Audit Records?"
-            : `Delete Record: ${deleteModal.record?.target || "Barangay"}`
+            ? "Delete all results?"
+            : `Delete ${deleteModal.record?.target || "this result"}?`
         }
         message={
           deleteModal.type === "all"
-            ? `Are you sure you want to permanently delete all ${history.length} classification audit logs? This action will purge all historical inferences and comparisons.`
-            : `Are you sure you want to remove the inference record for Barangay ${deleteModal.record?.target || ""} recorded on ${formatTimestamp(deleteModal.record?.timestamp)}?`
+            ? `This deletes all ${history.length} saved results. This cannot be undone.`
+            : "This cannot be undone."
         }
-        confirmText={deleteModal.type === "all" ? "Clear All Logs" : "Delete Record"}
+        confirmText="Delete"
         confirmVariant="danger"
         itemDetails={
           deleteModal.type === "single" && deleteModal.record
             ? {
                 title: `Barangay ${deleteModal.record.target || deleteModal.record.barangay}`,
-                subtitle: `Timestamp: ${formatTimestamp(deleteModal.record.timestamp)}`,
-                badge: `Predicted: ${deleteModal.record.predicted_class} Tier (${deleteModal.record.confidence || "—"}% confidence)`,
+                subtitle: formatTimestamp(deleteModal.record.timestamp),
+                badge: (TIER_META[deleteModal.record.predicted_class] || TIER_META.Middle).level,
               }
             : null
         }

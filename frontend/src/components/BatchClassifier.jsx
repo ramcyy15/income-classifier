@@ -18,30 +18,11 @@ import {
 } from "lucide-react";
 import { uploadBarangayBatchFile, getBatchTemplateDownloadUrl } from "../services/api";
 import { saveBatchClassificationRecords } from "../utils/historyStore";
+import { LEVELS } from "../constants/levels";
 
-const TIER_META = {
-  Low: {
-    level: "Level 1",
-    label: "Survival",
-    dot: "bg-red-500",
-    text: "text-red-700",
-    badge: "bg-red-50 text-red-700 border-red-200",
-  },
-  Middle: {
-    level: "Level 2",
-    label: "Subsistence",
-    dot: "bg-amber-500",
-    text: "text-amber-700",
-    badge: "bg-amber-50 text-amber-700 border-amber-200",
-  },
-  High: {
-    level: "Level 3",
-    label: "Self-Sufficient",
-    dot: "bg-emerald-500",
-    text: "text-emerald-700",
-    badge: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  },
-};
+const TIER_META = Object.fromEntries(
+  Object.entries(LEVELS).map(([cls, l]) => [cls, { level: `${l.short} · ${l.name}`, badge: l.badge }])
+);
 
 const escapeCSV = (val) => {
   if (val === null || val === undefined) return '""';
@@ -108,7 +89,7 @@ export default function BatchClassifier() {
     try {
       const resp = await uploadBarangayBatchFile(file);
       setBatchData(resp);
-      showToast(`Classified ${resp.successful} barangays successfully!`);
+      showToast(`${resp.successful} barangays checked.`);
     } catch (err) {
       setError(err.message || "Failed to process batch classification.");
     } finally {
@@ -133,6 +114,7 @@ export default function BatchClassifier() {
         probabilities: res.probabilities,
         top_feature: topDriver,
         feature_impacts: drivers,
+        shap: res.shap || null,
         ai_interpretation: res.interpretation || null,
         ai_recommendations: res.recommendations || [],
         ai_provider: res.ai_provider,
@@ -145,19 +127,19 @@ export default function BatchClassifier() {
 
     saveBatchClassificationRecords(recordsToSave);
     setIsSaved(true);
-    showToast(`Saved ${recordsToSave.length} barangay records to the Audit Trail!`);
+    showToast(`Saved ${recordsToSave.length} results.`);
   };
 
   const handleExportBatchCSV = () => {
     if (!batchData || !batchData.results || batchData.results.length === 0) return;
 
     const headers = [
-      "Barangay Jurisdiction",
-      "Predicted Tier",
-      "Confidence (%)",
-      "Probability Low (%)",
-      "Probability Middle (%)",
-      "Probability High (%)",
+      "Barangay",
+      "Level",
+      "Sure (%)",
+      "Chance of Level 1 (%)",
+      "Chance of Level 2 (%)",
+      "Chance of Level 3 (%)",
       "Average Monthly Income",
       "Employed Heads (%)",
       "Informal Settlers (%)",
@@ -168,10 +150,10 @@ export default function BatchClassifier() {
       "School Enrollment (%)",
       "Secondary Educated (%)",
       "Average Family Size",
-      "Dominant Decision Driver",
-      "Policy Executive Summary",
-      "Recommended Programs",
-      "Recommendation Engine Mode",
+      "Main reason",
+      "Summary",
+      "Suggested programs",
+      "Advice source",
     ];
 
     const rows = batchData.results.map((item) => {
@@ -183,7 +165,7 @@ export default function BatchClassifier() {
 
       return [
         escapeCSV(item.barangay),
-        escapeCSV(item.predicted_class),
+        escapeCSV(TIER_META[item.predicted_class]?.level || item.predicted_class),
         escapeCSV(item.confidence ? `${Math.round(item.confidence * 100)}%` : "N/A"),
         escapeCSV(probs.Low !== undefined ? (probs.Low * 100).toFixed(1) : "N/A"),
         escapeCSV(probs.Middle !== undefined ? (probs.Middle * 100).toFixed(1) : "N/A"),
@@ -216,7 +198,7 @@ export default function BatchClassifier() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    showToast("Batch results exported to CSV.");
+    showToast("Downloaded.");
   };
 
   const handleDownloadSample = () => {
@@ -263,7 +245,7 @@ export default function BatchClassifier() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    showToast("Downloaded official District V batch template.");
+    showToast("Template downloaded.");
   };
 
   return (
@@ -275,9 +257,9 @@ export default function BatchClassifier() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="fixed top-6 right-8 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-slate-900 text-white text-xs font-semibold shadow-xl border border-slate-700/60"
+            className="fixed top-6 right-8 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-[#104281] text-white text-xs font-semibold shadow-[0_10px_30px_-12px_rgba(13,54,107,0.6)] border border-[#2a78d6]/40"
           >
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-[#6da7ec] flex-shrink-0" />
             <span>{toastMessage}</span>
           </motion.div>
         )}
@@ -292,21 +274,21 @@ export default function BatchClassifier() {
                 <FileSpreadsheet className="w-4 h-4" />
               </span>
               <h2 className="text-base font-bold text-slate-900 tracking-tight">
-                Batch Multi-Barangay Classification
+                Upload a file
               </h2>
             </div>
             <p className="text-[11px] text-slate-500 font-medium">
-              Classify multiple District V barangays simultaneously using CSV or Microsoft Excel (.xlsx) files.
+              Check many barangays at once using an Excel or CSV file.
             </p>
           </div>
 
           <button
             onClick={handleDownloadSample}
             className="flex items-center gap-1.5 px-3.5 py-2 neu-btn text-indigo-700 text-xs font-semibold rounded-xl cursor-pointer"
-            title="Download formatted sample template with District V barangays"
+            title="Download a ready-to-fill file"
           >
             <Download className="w-3.5 h-3.5 text-indigo-600" />
-            <span>Download CSV Template</span>
+            <span>Get template</span>
           </button>
         </div>
 
@@ -337,19 +319,19 @@ export default function BatchClassifier() {
             <div className="space-y-1">
               <p className="text-xs font-bold text-slate-900">{file.name}</p>
               <p className="text-[10px] text-slate-500 font-mono">
-                {(file.size / 1024).toFixed(1)} KB · Ready for classification
+                {(file.size / 1024).toFixed(1)} KB · Ready
               </p>
               <span className="text-[10px] text-indigo-600 font-semibold underline block pt-1">
-                Click or drop another file to change
+                Choose another file
               </span>
             </div>
           ) : (
             <div className="space-y-1 max-w-sm">
               <p className="text-xs font-semibold text-slate-700">
-                Click to browse or drag and drop your spreadsheet here
+                Drop your file here or click to choose
               </p>
               <p className="text-[11px] text-slate-400 font-normal">
-                Supports .csv and Excel (.xlsx) files. Headers are automatically matched to the 10 community socio-economic indicators.
+                Excel (.xlsx) or CSV
               </p>
             </div>
           )}
@@ -359,12 +341,12 @@ export default function BatchClassifier() {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
           <div className="text-[11px] text-slate-500 font-medium">
             {file ? (
-              <span className="flex items-center gap-1.5 text-emerald-700 font-semibold">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                Spreadsheet loaded: ready to process
+              <span className="flex items-center gap-1.5 text-[#104281] font-semibold">
+                <CheckCircle2 className="w-4 h-4 text-[#2a78d6]" />
+                File ready
               </span>
             ) : (
-              <span>Template columns: Barangay, Income, Employed Heads, Utilities, Education, Family Size.</span>
+              <span>Use the template so the columns match.</span>
             )}
           </div>
 
@@ -385,21 +367,23 @@ export default function BatchClassifier() {
             <button
               onClick={handleUploadAndClassify}
               disabled={!file || loading}
-              className={`w-full sm:w-auto px-6 py-2.5 rounded-xl text-white font-semibold text-xs flex items-center justify-center gap-2 transition-all ${
-                !file || loading
-                  ? "opacity-50 neu-btn text-slate-400 cursor-not-allowed"
-                  : "neu-btn-primary shadow-md cursor-pointer active:scale-95"
+              className={`w-full sm:w-auto px-6 py-2.5 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 transition-all ${
+                loading
+                  ? "bg-[#104281] text-white cursor-wait shadow-md"
+                  : !file
+                  ? "neu-btn text-slate-500 cursor-not-allowed"
+                  : "neu-btn-primary text-white shadow-md cursor-pointer active:scale-95"
               }`}
             >
               {loading ? (
                 <>
                   <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Processing Batch Models…</span>
+                  <span>Checking…</span>
                 </>
               ) : (
                 <>
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>Classify All Barangays</span>
+                  <span>Check all barangays</span>
                 </>
               )}
             </button>
@@ -411,7 +395,7 @@ export default function BatchClassifier() {
           <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-start gap-2.5">
             <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
             <div className="space-y-1">
-              <span className="font-bold">Batch Processing Notice:</span>
+              <span className="font-bold">Something went wrong</span>
               <p className="leading-relaxed">{error}</p>
             </div>
           </div>
@@ -429,13 +413,13 @@ export default function BatchClassifier() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
             <div>
               <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                <span>Batch Inference Summary</span>
+                <span>Results</span>
                 <span className="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
-                  {batchData.successful} of {batchData.total_rows} Evaluated
+                  {batchData.successful} of {batchData.total_rows} checked
                 </span>
               </h3>
               <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                Evaluated from <code className="font-mono text-slate-700">{batchData.filename}</code>
+                From {batchData.filename}
               </p>
             </div>
 
@@ -445,7 +429,7 @@ export default function BatchClassifier() {
                 className="flex items-center gap-1.5 px-3.5 py-2 neu-btn text-slate-700 text-xs font-semibold rounded-xl cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Export Full CSV</span>
+                <span>Download</span>
               </button>
 
               <button
@@ -453,12 +437,12 @@ export default function BatchClassifier() {
                 disabled={isSaved}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                   isSaved
-                    ? "bg-emerald-600 text-white shadow-sm"
+                    ? "bg-[#104281] text-white shadow-sm"
                     : "neu-btn-primary text-white shadow-md active:scale-95"
                 }`}
               >
                 {isSaved ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
-                <span>{isSaved ? "Saved to Audit Log" : "Save All to Audit Trail"}</span>
+                <span>{isSaved ? "Saved" : "Save results"}</span>
               </button>
             </div>
           </div>
@@ -468,7 +452,7 @@ export default function BatchClassifier() {
             <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-1">
               <div className="flex items-center gap-1.5 font-bold text-amber-800">
                 <AlertTriangle className="w-4 h-4 text-amber-600" />
-                <span>{batchData.errors.length} Row(s) Skipped Due to Validation Errors:</span>
+                <span>{batchData.errors.length} row(s) skipped:</span>
               </div>
               <ul className="list-disc list-inside space-y-0.5 text-[11px] text-amber-700">
                 {batchData.errors.map((err, i) => (
@@ -484,11 +468,11 @@ export default function BatchClassifier() {
           <div className="overflow-x-auto rounded-2xl border border-slate-200/80">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-slate-50 text-[10px] font-mono uppercase tracking-wider text-slate-500 border-b border-slate-200">
+                <tr className="bg-slate-50 text-[10.5px] font-semibold text-slate-500 border-b border-slate-200">
                   <th className="py-3 px-4 font-semibold">Barangay</th>
-                  <th className="py-3 px-4 font-semibold">Income Tier</th>
-                  <th className="py-3 px-4 font-semibold">Confidence</th>
-                  <th className="py-3 px-4 font-semibold">Top Decision Driver</th>
+                  <th className="py-3 px-4 font-semibold">Level</th>
+                  <th className="py-3 px-4 font-semibold">Sure</th>
+                  <th className="py-3 px-4 font-semibold">Main reason</th>
                   <th className="py-3 px-4 font-semibold">Monthly Income</th>
                   <th className="py-3 px-4 font-semibold text-right">Details</th>
                 </tr>
@@ -515,8 +499,7 @@ export default function BatchClassifier() {
                           <span
                             className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${tierInfo.badge}`}
                           >
-                            <span className={`w-1.5 h-1.5 rounded-full ${tierInfo.dot}`} />
-                            {item.tier_label || tierInfo.level}
+                            {tierInfo.level}
                           </span>
                         </td>
                         <td className="py-3 px-4 font-mono font-bold text-slate-800">
@@ -545,11 +528,11 @@ export default function BatchClassifier() {
                                 <div className="flex items-center justify-between text-[10px] font-bold text-indigo-700 uppercase tracking-wider">
                                   <span className="flex items-center gap-1.5">
                                     <Sparkles className="w-3 h-3 text-indigo-600" />
-                                    Executive Policy Synthesis
+                                    Summary
                                   </span>
                                   {item.is_fallback && (
                                     <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-mono">
-                                      Standard Fallback Benchmarks
+                                      Standard advice
                                     </span>
                                   )}
                                 </div>
@@ -562,7 +545,7 @@ export default function BatchClassifier() {
                               {item.inputs && (
                                 <div>
                                   <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold block mb-2">
-                                    Reported Community Indicators
+                                    Details entered
                                   </span>
                                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-[11px]">
                                     {Object.entries(item.inputs).map(([k, v]) => (

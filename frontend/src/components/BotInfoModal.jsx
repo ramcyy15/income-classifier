@@ -13,28 +13,28 @@ export default function BotInfoModal({ isOpen, onClose }) {
 
   const flowSteps = [
     {
-      badge: "R",
-      badgeLabel: "Retrieve",
-      title: "Pulls the real numbers first",
-      desc: "When you enter a community profile, KalingaBot never invents data. He queries the District V empirical dataset (4,500+ surveyed records across 14 barangays) and executes the Stacking Ensemble ML model to extract the verified SWDI/PSA tier.",
-      tag: "Verified Local Grounding",
-      color: "bg-blue-600",
+      badge: "1",
+      badgeLabel: "Check",
+      title: "Reads your numbers",
+      desc: "The system looks at the 10 facts you entered and finds the income level.",
+      tag: "",
+      color: "bg-[#104281]",
     },
     {
-      badge: "A",
-      badgeLabel: "Augment",
-      title: "Pairs with official government standards",
-      desc: "Next, the raw predictions are contextualized with actual Philippine welfare guidelines — including DSWD Pantawid Pamilya (4Ps), DOLE Livelihood programs, DepEd Basic Education subsidies, and TESDA skills training criteria.",
-      tag: "Official Aid Rules",
-      color: "bg-indigo-600",
+      badge: "2",
+      badgeLabel: "Match",
+      title: "Uses real government programs",
+      desc: "It matches the result with programs like 4Ps, TUPAD, TESDA, and DepEd ALS.",
+      tag: "",
+      color: "bg-[#2a78d6]",
     },
     {
-      badge: "G",
-      badgeLabel: "Generate",
-      title: "Synthesizes honest, grounded guidance",
-      desc: "Finally, Gemini 1.5 Flash reads exclusively the verified factual baseline and crafts targeted intervention guidance with absolute zero hallucination risk.",
-      tag: "Zero-Hallucination AI",
-      color: "bg-purple-600",
+      badge: "3",
+      badgeLabel: "Suggest",
+      title: "Writes simple advice",
+      desc: "Google Gemini AI turns the result into short suggestions. Always review them before acting.",
+      tag: "",
+      color: "bg-[#6da7ec]",
     },
   ];
 
@@ -84,14 +84,14 @@ export default function BotInfoModal({ isOpen, onClose }) {
                   <Sparkles className="w-4 h-4 text-amber-300 fill-amber-300" />
                 </div>
                 <p className="text-xs font-mono text-indigo-200">
-                  District V AI Social Welfare & Decision Support Assistant
+                  Your helper for District V
                 </p>
                 <div className="flex items-center gap-2 mt-2">
                   <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-white/15 text-white border border-white/20">
-                    RAG Grounded
+                    AI helper
                   </span>
                   <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-emerald-400/20 text-emerald-300 border border-emerald-400/30">
-                    Stacking Ensemble
+                    District V
                   </span>
                 </div>
               </div>
@@ -109,7 +109,7 @@ export default function BotInfoModal({ isOpen, onClose }) {
                     : "text-slate-500 hover:text-slate-800"
                 }`}
               >
-                R-A-G Pipeline
+                What it does
               </button>
               <button
                 onClick={() => setActiveTab("architecture")}
@@ -119,10 +119,10 @@ export default function BotInfoModal({ isOpen, onClose }) {
                     : "text-slate-500 hover:text-slate-800"
                 }`}
               >
-                Model Architecture
+                How it works
               </button>
             </div>
-            <span className="text-[10px] font-mono text-slate-400">QC District V Engine</span>
+            
           </div>
 
           {/* Modal Body */}
@@ -132,10 +132,10 @@ export default function BotInfoModal({ isOpen, onClose }) {
                 {/* Who is he */}
                 <div className="neu-surface rounded-2xl p-4 space-y-1.5">
                   <h3 className="text-[10px] font-mono uppercase tracking-[0.12em] text-slate-400 font-semibold">
-                    Core Purpose
+                    About
                   </h3>
                   <p className="text-xs text-slate-600 leading-relaxed font-normal">
-                    <strong className="text-slate-900 font-semibold">KalingaBot</strong> is derived from <em>"kalinga"</em> — the Filipino virtue of empathetic care and collective stewardship. He was engineered for Quezon City District V to enable barangay desk officers and social workers to instantly interpret complex multidimensional poverty indicators without statistical ambiguity.
+                    <strong className="text-slate-900 font-semibold">KalingaBot</strong> comes from <em>"kalinga"</em>, the Filipino word for care. It helps barangay staff understand results quickly.
                   </p>
                 </div>
 
@@ -143,11 +143,8 @@ export default function BotInfoModal({ isOpen, onClose }) {
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between">
                     <h3 className="text-[10px] font-mono uppercase tracking-[0.12em] text-slate-400 font-semibold">
-                      Retrieval-Augmented Generation (RAG) Architecture
+                      Steps
                     </h3>
-                    <span className="text-[9px] font-mono font-semibold px-2 py-0.5 rounded-full neu-surface-sm text-indigo-700">
-                      Zero Hallucination
-                    </span>
                   </div>
 
                   {flowSteps.map((step) => (
@@ -179,7 +176,7 @@ export default function BotInfoModal({ isOpen, onClose }) {
                 <div className="p-3.5 rounded-2xl neu-inset-sm flex items-start gap-2.5">
                   <ShieldCheck className="w-4 h-4 text-indigo-600 flex-shrink-0 mt-0.5" />
                   <p className="text-[11px] text-slate-700 leading-relaxed font-normal">
-                    <strong className="text-slate-900 font-semibold">Academic Rigor:</strong> By separating empirical model inference from conversational generation, KalingaBot guarantees that all policy recommendations are strictly grounded in verified local indicators.
+                    <strong className="text-slate-900 font-semibold">Note:</strong> The level comes from the system, not the AI. The AI only writes the advice.
                   </p>
                 </div>
               </>
@@ -190,40 +187,40 @@ export default function BotInfoModal({ isOpen, onClose }) {
                 <div className="neu-surface rounded-2xl p-4.5 space-y-3">
                   <div className="flex items-center gap-2">
                     <Cpu className="w-4 h-4 text-indigo-600" />
-                    <h4 className="text-xs font-bold text-slate-900">Stacking Ensemble Pipeline</h4>
+                    <h4 className="text-xs font-bold text-slate-900">Three methods working together</h4>
                   </div>
                   <p className="text-[11px] text-slate-600 leading-relaxed">
-                    The machine learning backbone combines multiple diverse model families into a two-tier ensemble for maximum generalizability across District V:
+                    The system uses three methods. Two make a guess, and the third combines them.
                   </p>
 
                   <div className="space-y-2 pt-1">
                     <div className="neu-surface-sm p-3 rounded-xl flex items-center justify-between">
                       <div>
-                        <p className="text-xs font-semibold text-slate-800">Base Learner 1: Random Forest</p>
-                        <p className="text-[10px] text-slate-400">100 estimators · Gini impurity criterion</p>
+                        <p className="text-xs font-semibold text-slate-800">Random Forest</p>
+                        <p className="text-[10px] text-slate-500">Many decision trees vote on the level</p>
                       </div>
                       <span className="text-[10px] font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
-                        Non-linear Splits
+                        Step 1
                       </span>
                     </div>
 
                     <div className="neu-surface-sm p-3 rounded-xl flex items-center justify-between">
                       <div>
-                        <p className="text-xs font-semibold text-slate-800">Base Learner 2: Gradient Boosting</p>
-                        <p className="text-[10px] text-slate-400">Learning rate: 0.1 · Sequential residual minimization</p>
+                        <p className="text-xs font-semibold text-slate-800">Gradient Boosting</p>
+                        <p className="text-[10px] text-slate-500">Each tree learns from the last one's mistakes</p>
                       </div>
                       <span className="text-[10px] font-mono font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
-                        Residual Gradient
+                        Step 1
                       </span>
                     </div>
 
                     <div className="neu-inset-sm p-3 rounded-xl flex items-center justify-between">
                       <div>
-                        <p className="text-xs font-bold text-slate-900">Meta-Learner: Logistic Regression</p>
-                        <p className="text-[10px] text-slate-500">L2 regularization · Softmax class probabilities</p>
+                        <p className="text-xs font-bold text-slate-900">Logistic Regression</p>
+                        <p className="text-[10px] text-slate-500">Combines both into one final answer</p>
                       </div>
                       <span className="text-[10px] font-mono font-bold text-indigo-700 bg-white px-2 py-0.5 rounded border border-indigo-100">
-                        Final Arbitrator
+                        Step 2
                       </span>
                     </div>
                   </div>
@@ -232,12 +229,12 @@ export default function BotInfoModal({ isOpen, onClose }) {
                 <div className="neu-surface-sm p-4 rounded-2xl space-y-2">
                   <div className="flex items-center gap-2">
                     <BookOpen className="w-4 h-4 text-slate-600" />
-                    <h5 className="text-xs font-bold text-slate-800">Grounding Benchmark Datasets</h5>
+                    <h5 className="text-xs font-bold text-slate-800">Based on</h5>
                   </div>
                   <ul className="text-[11px] text-slate-600 space-y-1.5 list-disc pl-5">
-                    <li><strong>PSA FIES:</strong> Family Income and Expenditure Survey thresholds.</li>
-                    <li><strong>PSA MPI:</strong> Multidimensional Poverty Index deprivation dimensions.</li>
-                    <li><strong>DSWD SWDI:</strong> Social Welfare and Development Indicator validation tiers.</li>
+                    <li>DSWD data on District V families</li>
+                    <li>PSA family income survey (FIES)</li>
+                    <li>DSWD income levels (SWDI)</li>
                   </ul>
                 </div>
               </div>
@@ -246,7 +243,7 @@ export default function BotInfoModal({ isOpen, onClose }) {
 
           {/* Modal Footer */}
           <div className="px-6 py-3.5 border-t border-white/80 bg-[#EEF2F6]/60 backdrop-blur-md flex items-center justify-between text-[11px] font-mono text-slate-400">
-            <span>District V Thesis AI Engine</span>
+            <span>District V</span>
             <button
               onClick={onClose}
               className="px-4 py-1.5 neu-btn text-slate-800 font-semibold text-xs rounded-xl cursor-pointer"

@@ -4,26 +4,27 @@ import {
   Sliders, RotateCcw, AlertCircle, Eye, EyeOff, Info,
   DollarSign, Users, Home, Sparkles, TrendingUp, CheckCircle2, GraduationCap, Baby, HelpCircle, ChevronDown
 } from "lucide-react";
-import kalingaLogo from "../assets/KalingaBot AI.png";
 import GeoMap from "./GeoMap";
 import PredictionCard from "./PredictionCard";
 import FeatureDrivers from "./FeatureDrivers";
+import ShapExplanation from "./ShapExplanation";
 import AISuggestions from "./AISuggestions";
 import { saveClassificationRecord } from "../utils/historyStore";
 import { classifyBarangay } from "../services/api";
 import { useServerHealth } from "../context/ServerHealthContext";
+import Illustration from "./Illustration";
 
 const DISTRICT_V_BARANGAYS = [
   "Bagbag", "Capri", "Fairview", "Greater Lagro", "Gulod", "Kaligayahan",
   "Nagkaisang Nayon", "North Fairview", "Novaliches Proper",
   "Pasong Putik Proper", "San Agustin", "San Bartolome",
-  "Santa Lucia", "Santa Monica", "Other / Custom Community"
+  "Santa Lucia", "Santa Monica", "Other community"
 ];
 
 // Presets for testing
 const SAMPLE_PRESETS = [
   {
-    name: "Sample Profile A (High Deprivation / Level 1 Range)",
+    name: "Example: Level 1 barangay",
     data: {
       pctEmployedHead: "44.0",
       avgMonthlyIncomePhp: "15500",
@@ -38,7 +39,7 @@ const SAMPLE_PRESETS = [
     }
   },
   {
-    name: "Sample Profile B (Transitional / Level 2 Range)",
+    name: "Example: Level 2 barangay",
     data: {
       pctEmployedHead: "58.0",
       avgMonthlyIncomePhp: "25000",
@@ -53,7 +54,7 @@ const SAMPLE_PRESETS = [
     }
   },
   {
-    name: "Sample Profile C (Self-Sufficient / Level 3 Range)",
+    name: "Example: Level 3 barangay",
     data: {
       pctEmployedHead: "74.0",
       avgMonthlyIncomePhp: "36500",
@@ -279,6 +280,7 @@ export default function BarangayClassifier() {
           probabilities: data.probabilities,
           top_feature: topDriver,
           feature_impacts: drivers,
+          shap: data.shap || null,
           ai_interpretation: data.interpretation || null,
           ai_recommendations: data.recommendations || [],
           ai_provider: data.ai_provider,
@@ -345,7 +347,7 @@ export default function BarangayClassifier() {
               <div className="flex items-center gap-1.5">
                 <Sliders className="w-4 h-4 text-indigo-600" />
                 <span className="text-[13px] font-semibold tracking-[-0.01em] text-slate-800">
-                  Community Profile
+                  Barangay Details
                 </span>
               </div>
               <div className="flex items-center gap-3">
@@ -357,14 +359,14 @@ export default function BarangayClassifier() {
                       ? "neu-inset text-indigo-700 font-bold"
                       : "neu-btn text-slate-600 hover:text-slate-900"
                   }`}
-                  title="Toggle Quick Test Samples on or off"
+                  title="Show or hide example data"
                 >
                   {showPresets ? (
                     <EyeOff className="w-3.5 h-3.5 text-indigo-600" />
                   ) : (
                     <Eye className="w-3.5 h-3.5 text-slate-400" />
                   )}
-                  <span>Samples: {showPresets ? "ON" : "OFF"}</span>
+                  <span>Examples</span>
                 </button>
 
                 <button
@@ -380,17 +382,16 @@ export default function BarangayClassifier() {
             {showPresets && (
               <div className="mb-4 p-3.5 rounded-2xl neu-inset-sm">
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-[10px] font-mono uppercase tracking-[0.12em] text-indigo-700 font-semibold">
-                    Load a Sample Community Profile
+                  <label className="text-[11px] text-slate-600 font-semibold">
+                    Fill with an example
                   </label>
-                  <span className="text-[9px] text-indigo-600 font-medium font-mono">Fills all 10 fields</span>
                 </div>
                 <select
                   value={selectedPreset}
                   onChange={(e) => handlePresetSelect(e.target.value)}
                   className="w-full px-3 py-1.5 text-xs font-medium text-slate-700 neu-input rounded-xl focus:outline-none cursor-pointer"
                 >
-                  <option value="">Choose a sample profile to load...</option>
+                  <option value="">Choose an example…</option>
                   {SAMPLE_PRESETS.map((p, idx) => (
                     <option key={idx} value={idx}>{p.name}</option>
                   ))}
@@ -401,8 +402,7 @@ export default function BarangayClassifier() {
             {/* Target Community Selector */}
             <div className="mb-4">
               <label className="block text-[11px] font-medium text-slate-500 mb-1 flex items-center justify-between">
-                <span>SELECT BARANGAY</span>
-                <span className="text-[9.5px] text-slate-400 font-normal">District V, Quezon City</span>
+                <span>Barangay</span>
               </label>
               <select
                 value={form.barangay}
@@ -426,7 +426,6 @@ export default function BarangayClassifier() {
                     Income & Work
                   </span>
                 </div>
-                <span className="text-[10px] font-medium text-slate-400">Main factors</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
@@ -438,9 +437,6 @@ export default function BarangayClassifier() {
                 >
                   <label className="block text-[11px] font-semibold text-slate-700 mb-1 flex items-center justify-between">
                     <span>Average Monthly Household Income (₱)</span>
-                    <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-bold">
-                      Most Important
-                    </span>
                   </label>
                   <div
                     className={`relative flex items-center rounded-xl neu-inset border-l-4 ${
@@ -761,10 +757,12 @@ export default function BarangayClassifier() {
             <button
               onClick={handleSubmit}
               disabled={!isFormValid || loading}
-              className={`w-full py-3.5 rounded-2xl text-white font-semibold text-[13px] flex items-center justify-center gap-2 transition-all ${
-                !isFormValid || loading
-                  ? "opacity-60 neu-btn text-slate-400 cursor-not-allowed"
-                  : "neu-btn-primary cursor-pointer active:scale-98 shadow-md"
+              className={`w-full py-3.5 rounded-2xl font-semibold text-[13px] flex items-center justify-center gap-2 transition-all ${
+                loading
+                  ? "bg-[#104281] text-white cursor-wait shadow-md"
+                  : !isFormValid
+                  ? "neu-btn text-slate-500 cursor-not-allowed"
+                  : "neu-btn-primary text-white cursor-pointer active:scale-98 shadow-md"
               }`}
             >
               {loading ? (
@@ -773,24 +771,24 @@ export default function BarangayClassifier() {
                   <span>
                     {serverStatus === "waking" || requestSeconds >= 2
                       ? `Starting up… (${requestSeconds || serverSeconds}s)`
-                      : "Analyzing Community Data…"}
+                      : "Checking…"}
                   </span>
                 </>
               ) : (
-                <span>Analyze This Community</span>
+                <span>Check Income Level</span>
               )}
             </button>
 
             {hasValidationErrors && (
               <p className="text-center text-[11px] text-rose-600 bg-rose-500/10 border border-rose-300/60 rounded-xl py-1.5 px-3 mt-2 font-medium flex items-center justify-center gap-1.5">
                 <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                <span>Please fix the errors above. Percentages must be 0–100, income and family size must be greater than zero.</span>
+                <span>Please fix the fields marked in red.</span>
               </p>
             )}
 
             {!isFormFilled && !hasValidationErrors && !loading && (
-              <p className="text-center text-[10px] text-slate-400 flex items-center justify-center gap-1 mt-2 font-mono">
-                <AlertCircle className="w-3 h-3" /> Fill in all 10 fields to run the analysis.
+              <p className="text-center text-[10.5px] text-slate-400 flex items-center justify-center gap-1 mt-2">
+                <AlertCircle className="w-3 h-3" /> Fill in all fields to continue.
               </p>
             )}
 
@@ -819,7 +817,7 @@ export default function BarangayClassifier() {
                   className="flex flex-col items-center gap-1"
                 >
                   <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest">
-                    More below
+                    Scroll
                   </span>
                   <ChevronDown className="w-4 h-4 text-indigo-400" />
                 </motion.div>
@@ -833,23 +831,23 @@ export default function BarangayClassifier() {
                 <motion.div
                   animate={{ scale: [1, 1.05, 1], rotate: [0, 180, 360] }}
                   transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                  className="w-16 h-16 mb-4 flex items-center justify-center p-3 neu-inset-sm rounded-2xl text-indigo-600"
+                  className="w-16 h-16 mb-4 flex items-center justify-center p-3 neu-inset-sm rounded-2xl text-[#104281]"
                 >
-                  <RotateCcw className="w-8 h-8 animate-spin text-indigo-600" />
+                  <RotateCcw className="w-8 h-8 animate-spin text-[#104281]" />
                 </motion.div>
                 <h3 className="text-sm font-bold text-slate-800">
                   {serverStatus === "waking" || requestSeconds >= 2
-                    ? "Server is Starting Up"
-                    : "Analyzing Community Data"}
+                    ? "Starting up, please wait"
+                    : "Checking…"}
                 </h3>
                 <p className="text-xs font-mono text-indigo-600 font-semibold mt-1">
-                  {requestSeconds > 0 ? `${requestSeconds}s elapsed` : "Running analysis…"}
+                  {requestSeconds > 0 ? `${requestSeconds}s` : ""}
                 </p>
                 <p className="text-[11px] text-slate-500 mt-2 max-w-[280px] leading-relaxed">
-                  The system is evaluating 10 community indicators using our machine learning model to determine the income tier.
+                  This takes a few seconds.
                 </p>
                 <div className="w-48 h-1.5 rounded-full neu-inset overflow-hidden mt-4">
-                  <div className="h-full bg-gradient-to-r from-indigo-500 to-amber-500 rounded-full animate-pulse w-3/4" />
+                  <div className="h-full bg-[#2a78d6] rounded-full animate-pulse w-3/4" />
                 </div>
               </div>
             )}
@@ -857,19 +855,15 @@ export default function BarangayClassifier() {
             {!result && !loading && (
               <div className="h-full neu-surface rounded-3xl flex flex-col items-center justify-center text-center p-10 shadow-sm">
                 <motion.div
-                  animate={{ y: [0, -6, 0] }}
-                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                  className="w-16 h-16 mb-3 flex items-center justify-center p-2 neu-inset-sm rounded-2xl"
+                  animate={{ y: [0, -4, 0] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                  className="mb-4"
                 >
-                  <img
-                    src={kalingaLogo}
-                    alt="KalingaBot AI"
-                    className="w-full h-full object-contain"
-                  />
+                  <Illustration name="community" className="w-56" />
                 </motion.div>
-                <p className="text-sm font-semibold text-slate-700">Ready to Analyze</p>
+                <p className="text-sm font-semibold text-slate-700">No result yet</p>
                 <p className="text-[11px] text-slate-400 mt-1 max-w-[260px] leading-relaxed font-normal">
-                  Fill in the community information on the left and click <strong>"Analyze This Community"</strong> to see the income tier, confidence level, and recommended programs.
+                  Fill in the details and press <strong>Check Income Level</strong>.
                 </p>
               </div>
             )}
@@ -881,30 +875,6 @@ export default function BarangayClassifier() {
                 animate="visible"
                 className="space-y-4"
               >
-                {/* Result Summary Banner */}
-                <motion.div variants={itemVariants}>
-                  <div className="neu-surface rounded-3xl px-5 py-4 flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-[10px] font-mono uppercase tracking-widest text-slate-400 font-semibold">Analysis Result for</p>
-                      <p className="text-sm font-bold text-slate-900">{form.barangay}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[10px] text-slate-400 font-medium">Income Level</p>
-                      <p className={`text-base font-black tracking-tight ${
-                        result.predicted_class === "High" ? "text-emerald-600" :
-                        result.predicted_class === "Middle" ? "text-amber-600" : "text-rose-600"
-                      }`}>
-                        {result.predicted_class === "High" ? "Level 3 — Self-Sufficient" :
-                         result.predicted_class === "Middle" ? "Level 2 — Subsistence" :
-                         "Level 1 — Survival"}
-                      </p>
-                      <p className="text-[10px] text-slate-500 font-mono">
-                        {result.confidence ? `${Math.round(result.confidence * 100)}% confidence` : ""}
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-
                 {/* Prediction Card */}
                 <motion.div variants={itemVariants}>
                   <PredictionCard
@@ -912,7 +882,6 @@ export default function BarangayClassifier() {
                     confidence={result.confidence}
                     probabilities={result.probabilities}
                     targetName={`Barangay ${form.barangay}`}
-                    isIndividual={false}
                   />
                 </motion.div>
 
@@ -924,12 +893,15 @@ export default function BarangayClassifier() {
                   />
                 </motion.div>
 
-                {/* Key Decision Drivers */}
-                {result.feature_impacts?.length > 0 && (
+                {/* SHAP explanation of the prediction */}
+                {result.shap ? (
+                  <motion.div variants={itemVariants}>
+                    <ShapExplanation shap={result.shap} predictedClass={result.predicted_class} />
+                  </motion.div>
+                ) : result.feature_impacts?.length > 0 && (
                   <motion.div variants={itemVariants}>
                     <FeatureDrivers
                       featureImpacts={result.feature_impacts}
-                      subtitle="The factors below most influenced this community's income classification"
                     />
                   </motion.div>
                 )}
@@ -940,7 +912,6 @@ export default function BarangayClassifier() {
                     <AISuggestions
                       interpretation={result.interpretation}
                       recommendations={result.recommendations}
-                      subtitle="Recommended government programs and interventions for this community"
                       isFallback={result.is_fallback}
                       aiProvider={result.ai_provider}
                       aiNote={result.ai_note}

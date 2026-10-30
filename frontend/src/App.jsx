@@ -5,10 +5,12 @@ import Header from './components/Header';
 import ClassificationCenter from './components/ClassificationCenter';
 import HistoryView from './components/HistoryView';
 import SystemPage from './components/SystemPage';
+import DistrictView from './components/DistrictView';
 import { ServerHealthProvider, useServerHealth } from './context/ServerHealthContext';
 
 function MainAppLayout() {
   const [activeTab, setActiveTab] = useState('classifier');
+  const [classifierMode, setClassifierMode] = useState('single');
   const { isGatewayOpen, serverStatus, supabaseStatus } = useServerHealth();
 
   // If the server is waking or Supabase is paused on initial load (and user has not clicked bypass):
@@ -47,7 +49,24 @@ function MainAppLayout() {
                 transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
                 className="h-full"
               >
-                <ClassificationCenter />
+                <ClassificationCenter key={classifierMode} initialMode={classifierMode} />
+              </motion.div>
+            )}
+            {activeTab === 'district' && (
+              <motion.div
+                key="district"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+                className="h-full"
+              >
+                <DistrictView
+                  onClassifyBatch={() => {
+                    setClassifierMode('batch');
+                    setActiveTab('classifier');
+                  }}
+                />
               </motion.div>
             )}
             {activeTab === 'history' && (
