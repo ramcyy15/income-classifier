@@ -23,20 +23,20 @@ export default function WelcomeBanner({ onUpload }) {
   }
 
   return (
-    <PhotoBanner photo={PHOTOS.welcome}>
+    <PhotoBanner photo={PHOTOS.welcome} plain>
       <div className="p-6 sm:p-7 pb-8 min-h-[200px] flex flex-wrap items-end justify-between gap-4">
-        <div className="max-w-md self-center">
-          <p className="text-[11px] font-semibold text-sky-200">District V · Quezon City</p>
-          <h2 className="text-2xl font-bold tracking-tight text-white mt-1">
+        <div className="max-w-[300px] self-end bg-white rounded-2xl px-4 py-3 shadow-lg">
+          <p className="text-[11px] font-semibold text-[#2a78d6]">District V · Quezon City</p>
+          <h2 className="text-lg leading-snug font-bold tracking-tight text-[#0d366b] mt-0.5">
             Find the barangays that need help most
           </h2>
-          <p className="text-[12px] text-white/85 mt-2">Enter a barangay's details to see its income level and program ideas.</p>
+          <p className="text-[11.5px] text-slate-600 mt-1">Enter a barangay's details to see its income level and program ideas.</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={onUpload}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white text-[#104281] text-xs font-bold shadow-md hover:bg-sky-50 active:scale-95 transition cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#104281] text-white text-xs font-bold shadow-lg hover:bg-[#0d366b] active:scale-95 transition cursor-pointer"
           >
             <UploadCloud className="w-3.5 h-3.5" />
             Upload a file
@@ -50,7 +50,7 @@ export default function WelcomeBanner({ onUpload }) {
           setHidden(true);
         }}
         aria-label="Hide welcome guide"
-        className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/25 hover:bg-black/40 text-white flex items-center justify-center cursor-pointer"
+        className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white text-slate-600 hover:bg-slate-100 shadow-md flex items-center justify-center cursor-pointer"
       >
         <X className="w-4 h-4" />
       </button>
