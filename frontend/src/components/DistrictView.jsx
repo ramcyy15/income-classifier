@@ -259,31 +259,31 @@ export default function DistrictView({ onClassifyBatch }) {
   return (
     <div className="space-y-5 max-w-6xl mx-auto pb-6">
       {/* Header */}
-      <PhotoBanner photo={PHOTOS.district} minHeight="min-h-[150px]">
-        <div className="p-6 flex flex-wrap items-end justify-between gap-4 min-h-[150px]">
-          <div className="space-y-2">
+      <PhotoBanner photo={PHOTOS.district} minHeight="min-h-[170px]" plain>
+        <div className="p-5 pb-7 flex flex-wrap items-end justify-between gap-3 min-h-[170px]">
+          <div className="bg-white rounded-2xl px-5 py-4 shadow-lg space-y-2">
             <div>
-              <p className="text-[11px] font-semibold text-sky-200">District V · Quezon City</p>
-              <h1 className="text-2xl font-bold tracking-tight text-white">District Map</h1>
+              <p className="text-[11px] font-semibold text-[#2a78d6]">District V · Quezon City</p>
+              <h1 className="text-2xl font-bold tracking-tight text-[#0d366b]">District Map</h1>
             </div>
             <div className="flex items-center gap-2">
               <div
-                className="w-40 h-1.5 rounded-full bg-white/25 overflow-hidden"
+                className="w-40 h-1.5 rounded-full bg-[#dbe7f6] overflow-hidden"
                 role="progressbar"
                 aria-valuemin={0}
                 aria-valuemax={14}
                 aria-valuenow={ranked.length}
                 aria-label="Barangays checked"
               >
-                <div className="h-full bg-white rounded-full" style={{ width: `${(ranked.length / 14) * 100}%` }} />
+                <div className="h-full bg-[#104281] rounded-full" style={{ width: `${(ranked.length / 14) * 100}%` }} />
               </div>
-              <p className="text-[11px] text-white/90 font-medium">{ranked.length} of 14 barangays checked</p>
+              <p className="text-[11px] text-slate-600 font-medium">{ranked.length} of 14 barangays checked</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={onClassifyBatch}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-white/40 bg-[#0d366b]/50 backdrop-blur-sm text-white text-[11px] font-semibold hover:bg-white/10 transition cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#104281] text-white text-[11px] font-semibold shadow-lg hover:bg-[#0d366b] transition cursor-pointer"
             >
               <UploadCloud className="w-3.5 h-3.5" />
               Check barangays
@@ -291,7 +291,7 @@ export default function DistrictView({ onClassifyBatch }) {
             <button
               onClick={exportCSV}
               disabled={!ranked.length}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white text-[#104281] text-[11px] font-bold shadow-md hover:bg-sky-50 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white text-[#104281] text-[11px] font-bold shadow-lg hover:bg-sky-50 transition cursor-pointer disabled:text-slate-400 disabled:hover:bg-white disabled:cursor-not-allowed"
             >
               <Download className="w-3.5 h-3.5" />
               Download list
